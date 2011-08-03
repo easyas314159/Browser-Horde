@@ -25,14 +25,16 @@ public class ErrorTrap implements Filter {
 		try {
 			chain.doFilter(request, response);
 		}
+		catch(IOException ex) {
+			log.error("Error handling request", ex);
+			throw ex;
+		}
+		catch(ServletException ex) {
+			log.error("Error handling request", ex);
+			throw ex;
+		}
 		catch(Throwable t) {
 			log.error("Error handling request", t);
-			if(t instanceof IOException) {
-				throw (IOException)t;
-			}
-			if(t instanceof ServletException) {
-				throw (ServletException)t;
-			}
 			throw new ServletException(t);
 		}
 	}
