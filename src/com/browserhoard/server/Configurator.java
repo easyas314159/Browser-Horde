@@ -16,12 +16,18 @@ import net.spy.memcached.MemcachedClient;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.Bucket;
 import com.browserhoard.server.util.GsonUtils;
 
 public class Configurator implements ServletContextListener {
 	private final Logger log = Logger.getLogger(getClass());
 
 	public static final String MEMCAHED = "memcached";
+	public static final String AWS_CREDENTIALS = "aws_credentials";
 
 	public void contextInitialized(ServletContextEvent event) {
 		try {
@@ -33,6 +39,8 @@ public class Configurator implements ServletContextListener {
 				;
 
 			initMemcached(context);
+			initAWSCredentials(context);
+			initAmazonS3(context);
 		}
 		catch(Throwable t) {
 			log.error("Uh Oh!", t);
@@ -78,5 +86,27 @@ public class Configurator implements ServletContextListener {
 			}
 		}
 		return memcached;
+	}
+
+	private AWSCredentials initAWSCredentials(ServletContext context) {
+		String awsAccessKey = context.getInitParameter(ServletInitOptions.AWS_ACCESS_KEY);
+		String awsSecretKey = context.getInitParameter(ServletInitOptions.AWS_SECRET_KEY);
+
+		AWSCredentials credentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+		context.setAttribute(AWS_CREDENTIALS, credentials);
+
+		return credentials;
+	}
+
+	private AmazonS3 initAmazonS3(ServletContext context) {
+		AWSCredentials awsCredentials = (AWSCredentials)context.getAttribute(AWS_CREDENTIALS);
+		AmazonS3 s3 = new AmazonS3Client(awsCredentials);
+
+		List<Bucket> buckets = s3.listBuckets();
+		for(Bucket bucket : buckets) {
+			log.debug(bucket.getName());
+		}
+
+		return s3;
 	}
 }
