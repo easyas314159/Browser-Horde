@@ -58,7 +58,7 @@ public class ScriptServlet extends HttpServlet {
 		fileCleaningTracker = new FileCleaningTracker();
 		fileItemFactory.setFileCleaningTracker(fileCleaningTracker);
 
-		awsSimpleDB = (AmazonSimpleDBAsync)context.getAttribute(Configurator.AWS_SIMPLEDB);
+		awsSimpleDB = (AmazonSimpleDBAsync)context.getAttribute(Configurator.AWS_SDB);
 
 		awsS3 = (AmazonS3)context.getAttribute(Configurator.AWS_S3);
 	}

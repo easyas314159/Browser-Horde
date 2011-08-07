@@ -70,7 +70,7 @@ public final class JobServlet extends HttpServlet {
 			checkedOutJobs = new DistributedCache<WorkOrderResponse>(memcached, null, NS_CHECKED_OUT_JOBS);
 		}
 
-		awsSimpleDB = (AmazonSimpleDBAsync)context.getAttribute(Configurator.AWS_SIMPLEDB);
+		awsSimpleDB = (AmazonSimpleDBAsync)context.getAttribute(Configurator.AWS_SDB);
 
 		defaultTaskTimeout = ParamUtils.asLong(config.getInitParameter(INIT_PARAM_TASK_DEFAULT_TIMEOUT), 600000L);
 		log.info(String.format("Default task timeout: %d", defaultTaskTimeout));
