@@ -1,4 +1,4 @@
-package com.browserhoard.server;
+package com.browserhorde.server;
 
 public final class SessionAttributes {
 	public static final String USER_ID = "user.id";

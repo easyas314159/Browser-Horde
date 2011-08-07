@@ -1,4 +1,4 @@
-package com.browserhoard.server;
+package com.browserhorde.server;
 
 import java.net.InetSocketAddress;
 import java.util.HashSet;
@@ -29,15 +29,17 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.Bucket;
+import com.amazonaws.services.s3.model.ListBucketsRequest;
 import com.amazonaws.services.s3.model.Region;
 import com.amazonaws.services.simpledb.AmazonSimpleDBAsync;
 import com.amazonaws.services.simpledb.AmazonSimpleDBAsyncClient;
 import com.amazonaws.services.simpledb.model.CreateDomainRequest;
 import com.amazonaws.services.simpledb.model.ListDomainsRequest;
 import com.amazonaws.services.simpledb.model.ListDomainsResult;
-import com.browserhoard.server.aws.simpledb.DomainManager;
-import com.browserhoard.server.util.GsonUtils;
-import com.browserhoard.server.util.ParamUtils;
+import com.browserhorde.server.aws.BucketManager;
+import com.browserhorde.server.aws.DomainManager;
+import com.browserhorde.server.util.GsonUtils;
+import com.browserhorde.server.util.ParamUtils;
 
 public class Configurator implements ServletContextListener {
 	private final Logger log = Logger.getLogger(getClass());
@@ -184,27 +186,30 @@ public class Configurator implements ServletContextListener {
 	}
 
 	private AmazonS3 initAmazonS3(ServletContext context, AWSCredentials awsCredentials, ClientConfiguration awsClientConfig) {
-		String s3Bucket = ParamUtils.asString(context.getInitParameter(ServletInitOptions.AWS_S3_BUCKET));
+		String s3BucketPrefix = ParamUtils.asString(context.getInitParameter(ServletInitOptions.AWS_S3_BUCKET_PREFIX));
+		String s3Buckets = ParamUtils.asString(context.getInitParameter(ServletInitOptions.AWS_S3_BUCKETS));
 
-		if(s3Bucket == null) {
-			log.debug("No S3 bucket specified");
-			return null;
-		}
-
+		BucketManager.setBucketPrefix(s3BucketPrefix);
 		AmazonS3 s3 = new AmazonS3Client(awsCredentials, awsClientConfig);
 
-		Bucket targetBucket = null;
-		List<Bucket> buckets = s3.listBuckets();
-		for(Bucket bucket : buckets) {
-			if(bucket.getName().equals(s3Bucket)) {
-				targetBucket = bucket;
-				break;
+		Set<String> newBuckets = new HashSet<String>();
+		String rawBuckets[] = s3Buckets.split(";");
+
+		for(String bucket : rawBuckets) {
+			bucket = StringUtils.trimToNull(bucket);
+			if(bucket != null) {
+				bucket = BucketManager.getBucket(bucket);
+				newBuckets.add(bucket);
 			}
 		}
 
-		if(targetBucket == null) {
-			log.info(String.format("Creating S3 Bucket"));
-			targetBucket = s3.createBucket(s3Bucket, Region.US_Standard);
+		List<Bucket> buckets = s3.listBuckets();
+		for(Bucket bucket : buckets) {
+			newBuckets.remove(bucket.getName());
+		}
+		for(String bucket : newBuckets) {
+			log.info(String.format("Creating bucket: \'%s\'", bucket));
+			s3.createBucket(bucket, Region.US_Standard);
 		}
 
 		return s3;

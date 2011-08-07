@@ -1,4 +1,4 @@
-package com.browserhoard.server.api;
+package com.browserhorde.server.api;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -25,20 +25,20 @@ import com.amazonaws.services.simpledb.model.GetAttributesResult;
 import com.amazonaws.services.simpledb.model.Item;
 import com.amazonaws.services.simpledb.model.SelectRequest;
 import com.amazonaws.services.simpledb.model.SelectResult;
-import com.browserhoard.server.Configurator;
-import com.browserhoard.server.SessionAttributes;
-import com.browserhoard.server.api.json.ApiResponse;
-import com.browserhoard.server.api.json.InvalidRequestResponse;
-import com.browserhoard.server.api.json.NoTasksResponse;
-import com.browserhoard.server.api.json.RequestDeniedResponse;
-import com.browserhoard.server.api.json.WorkOrderResponse;
-import com.browserhoard.server.aws.simpledb.DomainManager;
-import com.browserhoard.server.cache.Cache;
-import com.browserhoard.server.cache.DistributedCache;
-import com.browserhoard.server.cache.SimpleCache;
-import com.browserhoard.server.util.GsonUtils;
-import com.browserhoard.server.util.Identifier;
-import com.browserhoard.server.util.ParamUtils;
+import com.browserhorde.server.Configurator;
+import com.browserhorde.server.SessionAttributes;
+import com.browserhorde.server.api.json.ApiResponse;
+import com.browserhorde.server.api.json.InvalidRequestResponse;
+import com.browserhorde.server.api.json.NoTasksResponse;
+import com.browserhorde.server.api.json.RequestDeniedResponse;
+import com.browserhorde.server.api.json.WorkOrderResponse;
+import com.browserhorde.server.aws.DomainManager;
+import com.browserhorde.server.cache.Cache;
+import com.browserhorde.server.cache.DistributedCache;
+import com.browserhorde.server.cache.SimpleCache;
+import com.browserhorde.server.util.GsonUtils;
+import com.browserhorde.server.util.Identifier;
+import com.browserhorde.server.util.ParamUtils;
 import com.google.gson.Gson;
 
 public final class JobServlet extends HttpServlet {
@@ -54,18 +54,20 @@ public final class JobServlet extends HttpServlet {
 
 	private AmazonSimpleDBAsync awsSimpleDB = null;
 
-	private Cache<String, Object> checkedOutJobs = null;
+	private Cache<String, WorkOrderResponse> checkedOutJobs = null;
 
 	@Override
 	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+
 		ServletContext context = config.getServletContext();
 
 		MemcachedClient memcached = (MemcachedClient)context.getAttribute(Configurator.MEMCAHED);
 		if(memcached == null) {
-			checkedOutJobs = new SimpleCache<String, Object>();
+			checkedOutJobs = new SimpleCache<String, WorkOrderResponse>();
 		}
 		else {
-			checkedOutJobs = new DistributedCache<Object>(memcached, null, NS_CHECKED_OUT_JOBS);
+			checkedOutJobs = new DistributedCache<WorkOrderResponse>(memcached, null, NS_CHECKED_OUT_JOBS);
 		}
 
 		awsSimpleDB = (AmazonSimpleDBAsync)context.getAttribute(Configurator.AWS_SIMPLEDB);
@@ -89,7 +91,7 @@ public final class JobServlet extends HttpServlet {
 		}
 
 		if(response != null) {
-			Gson gson = GsonUtils.getGsonBuilder().create();
+			Gson gson = GsonUtils.newGson();
 			gson.toJson(response, rsp.getWriter());
 		}
 	}

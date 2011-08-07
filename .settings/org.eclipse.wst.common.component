@@ -3,7 +3,7 @@
     <wb-module deploy-name="BrowserHoard">
         <wb-resource deploy-path="/" source-path="/war"/>
         <wb-resource deploy-path="/WEB-INF/classes" source-path="/src"/>
-        <property name="context-root" value="BrowserHoard"/>
-        <property name="java-output-path" value="/BrowserHoard/build/classes"/>
+        <property name="context-root" value="BrowserHorde"/>
+        <property name="java-output-path" value="/BrowserHorde/build/classes"/>
     </wb-module>
 </project-modules>

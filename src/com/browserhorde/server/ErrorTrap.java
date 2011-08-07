@@ -1,4 +1,4 @@
-package com.browserhoard.server;
+package com.browserhorde.server;
 
 import java.io.IOException;
 

@@ -1,6 +1,6 @@
-package com.browserhoard.server.api.json;
+package com.browserhorde.server.api.json;
 
-import com.browserhoard.server.api.ApiResponseStatus;
+import com.browserhorde.server.api.ApiResponseStatus;
 
 public class WorkOrderResponse extends ApiResponse {
 	private final String id;

@@ -1,4 +1,4 @@
-package com.browserhoard.server.util;
+package com.browserhorde.server.util;
 
 import org.apache.commons.lang.StringUtils;
 

@@ -1,4 +1,4 @@
-package com.browserhoard.server.aws.simpledb;
+package com.browserhorde.server.aws;
 
 public final class DomainManager {
 	private static final String SUFFIX_USERS = "users";

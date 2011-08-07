@@ -1,4 +1,4 @@
-package com.browserhoard.server.cache;
+package com.browserhorde.server.cache;
 
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
