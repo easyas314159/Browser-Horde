@@ -6,6 +6,7 @@ import javax.servlet.ServletContext;
 
 import org.apache.commons.chain.Context;
 
+@SuppressWarnings("unchecked")
 public class ConfigContext extends HashMap implements Context {
 	private static final String KEY_SERVLET_CONTEXT = "servlet_context";
 

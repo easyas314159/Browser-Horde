@@ -15,6 +15,17 @@ public final class ParamUtils {
 		return value;
 	}
 	
+	public static Boolean asBoolean(String value) {
+		return asBoolean(value, null);
+	}
+	public static Boolean asBoolean(String value, Boolean def) {
+		value = StringUtils.trimToNull(value);
+		if(value == null) {
+			return Boolean.valueOf(def);
+		}
+		return Boolean.valueOf(value);
+	}
+	
 	public static Integer asInteger(String value) {
 		return asInteger(value, null);
 	}
