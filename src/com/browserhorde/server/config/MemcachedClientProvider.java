@@ -11,15 +11,19 @@ import net.spy.memcached.DefaultConnectionFactory;
 import net.spy.memcached.MemcachedClient;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
 
-import com.browserhorde.server.Configurator;
 import com.browserhorde.server.ServletInitOptions;
+import com.google.inject.Inject;
+import com.google.inject.Provider;
 
-public class InitMemcached extends ConfigCommand {
+public class MemcachedClientProvider implements Provider<MemcachedClient> {
+	private final Logger log = Logger.getLogger(getClass());
+
+	@Inject private ServletContext context;
+
 	@Override
-	public boolean execute(ConfigContext ctx) throws Exception {
-		ServletContext context = ctx.getServletContext();
-
+	public MemcachedClient get() {
 		ClassLoader loader = ConnectionFactory.class.getClassLoader();
 		String connectionFactoryClassName = StringUtils.trimToNull(context.getInitParameter(ServletInitOptions.MEMCACHED_CONNECTION_FACTORY));
 
@@ -55,8 +59,6 @@ public class InitMemcached extends ConfigCommand {
 				log.error("Unable to create memcached client", t);
 			}
 		}
-		context.setAttribute(Configurator.MEMCAHED, memcached);
-
-		return false;
+		return memcached;
 	}
 }

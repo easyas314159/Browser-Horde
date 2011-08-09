@@ -1,4 +1,4 @@
-package com.browserhorde.server.api;
+package com.browserhorde.server.api.json;
 
 public enum ApiResponseStatus {
 	OK,

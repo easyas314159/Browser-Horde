@@ -10,20 +10,24 @@
     <param-value>7ucHXYnMk+lWsstJeZvactOwneLqgdxVVBbKhLHQ</param-value>
   </context-param>
   <context-param>
-  	<param-name>aws.object_prefix</param-name>
-  	<param-value>com.browserhorde.dev.</param-value>
-  </context-param>
-  <context-param>
     <param-name>aws.user_agent</param-name>
-    <param-value>Browser Horde (browserhor.de)</param-value>
+    <param-value>Browser Horde</param-value>
   </context-param>
   <context-param>
-    <param-name>aws.s3.buckets</param-name>
-    <param-value>scripts;results</param-value>
+    <param-name>aws.s3.bucket</param-name>
+    <param-value>com.browserhorde.dev</param-value>
+  </context-param>
+  <context-param>
+    <param-name>aws.simpledb.domain_prefix</param-name>
+    <param-value>com.browserhorde.dev.</param-value>
   </context-param>
   <context-param>
     <param-name>aws.simpledb.domains</param-name>
     <param-value>users;jobs;tasks;results</param-value>
+  </context-param>
+  <context-param>
+    <param-name>aws.ses.sender</param-name>
+    <param-value>no-reply@brainsinjars.com</param-value>
   </context-param>
   <listener>
     <listener-class>com.browserhorde.server.Configurator</listener-class>
@@ -31,34 +35,16 @@
   <listener>
     <listener-class>org.apache.commons.fileupload.servlet.FileCleanerCleanup</listener-class>
   </listener>
+  <listener>
+    <listener-class>com.browserhorde.server.DependencyInjection</listener-class>
+  </listener>
   <filter>
-    <display-name>ErrorTrap</display-name>
-    <filter-name>ErrorTrap</filter-name>
-    <filter-class>com.browserhorde.server.ErrorTrap</filter-class>
+    <display-name>GuiceFilter</display-name>
+    <filter-name>GuiceFilter</filter-name>
+    <filter-class>com.google.inject.servlet.GuiceFilter</filter-class>
   </filter>
   <filter-mapping>
-    <filter-name>ErrorTrap</filter-name>
-    <url-pattern>/*</url-pattern>
+    <filter-name>GuiceFilter</filter-name>
+    <url-pattern>*</url-pattern>
   </filter-mapping>
-  <servlet>
-    <description></description>
-    <display-name>JobServlet</display-name>
-    <servlet-name>JobServlet</servlet-name>
-    <servlet-class>com.browserhorde.server.api.JobServlet</servlet-class>
-  </servlet>
-  <servlet-mapping>
-    <servlet-name>JobServlet</servlet-name>
-    <url-pattern>/job/checkout</url-pattern>
-    <url-pattern>/job/checkin</url-pattern>
-  </servlet-mapping>
-  <servlet>
-    <description></description>
-    <display-name>ScriptServlet</display-name>
-    <servlet-name>ScriptServlet</servlet-name>
-    <servlet-class>com.browserhorde.server.api.ScriptServlet</servlet-class>
-  </servlet>
-  <servlet-mapping>
-    <servlet-name>ScriptServlet</servlet-name>
-    <url-pattern>/script</url-pattern>
-  </servlet-mapping>
 </web-app>

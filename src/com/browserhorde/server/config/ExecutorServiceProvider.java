@@ -1,21 +1,27 @@
 package com.browserhorde.server.config;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.ServletContext;
 
-import com.browserhorde.server.Configurator;
+import org.apache.log4j.Logger;
+
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.util.ParamUtils;
+import com.google.inject.Inject;
+import com.google.inject.Provider;
 
-public class InitThreadPool extends ConfigCommand {
+public class ExecutorServiceProvider implements Provider<ExecutorService> {
+	private final Logger log = Logger.getLogger(getClass());
+
+	@Inject private ServletContext context;
+
 	@Override
-	public boolean execute(ConfigContext ctx) throws Exception {
+	public ExecutorService get() {
 		Runtime rt = Runtime.getRuntime();
-		ServletContext context = ctx.getServletContext();
 
-		// TODO: Externalize these options into context config
 		int core_pool_size = ParamUtils.asInteger(context.getInitParameter(ServletInitOptions.EXECUTOR_CORE_POOL_SIZE), 1);
 		int max_pool_size = ParamUtils.asInteger(context.getInitParameter(ServletInitOptions.EXECUTOR_MAX_POOL_SIZE), rt.availableProcessors() << 1);
 		int keep_alive_timeout = ParamUtils.asInteger(context.getInitParameter(ServletInitOptions.EXECUTOR_CORE_THREAD_TIMEOUT), 300);
@@ -47,8 +53,6 @@ public class InitThreadPool extends ConfigCommand {
 		// TODO: Allow custom thread factory configuration
 		//executor.setThreadFactory(threadFactory);
 
-		context.setAttribute(Configurator.EXECUTOR_SERVICE, executor);
-
-		return false;
-	}		
+		return executor;
+	}
 }
