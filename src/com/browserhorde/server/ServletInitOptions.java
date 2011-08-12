@@ -24,7 +24,7 @@ public final class ServletInitOptions {
 
 	// Amazon Web Services - SimpleDB
 	public static final String AWS_SIMPLEDB_DOMAIN_PREFIX = "aws.simpledb.domain_prefix";
-	public static final String AWS_SIMPLEDB_DOMAINS = "aws.simpledb.domains";
+	//public static final String AWS_SIMPLEDB_DOMAINS = "aws.simpledb.domains";
 	
 	// Amazon Web Services - SES
 	public static final String AWS_SES_SENDER = "aws.ses.sender";

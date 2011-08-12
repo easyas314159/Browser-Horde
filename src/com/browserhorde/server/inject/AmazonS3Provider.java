@@ -1,4 +1,4 @@
-package com.browserhorde.server.config;
+package com.browserhorde.server.inject;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentials;

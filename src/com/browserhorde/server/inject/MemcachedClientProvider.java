@@ -1,4 +1,4 @@
-package com.browserhorde.server.config;
+package com.browserhorde.server.inject;
 
 import java.net.InetSocketAddress;
 import java.util.List;
