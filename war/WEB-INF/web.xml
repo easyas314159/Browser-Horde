@@ -35,15 +35,29 @@
     <listener-class>com.browserhorde.server.DependencyInjection</listener-class>
   </listener>
   <filter>
+    <display-name>AccessControlFilter</display-name>
+    <filter-name>AccessControlFilter</filter-name>
+    <filter-class>com.browserhorde.server.AccessControlFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>AccessControlFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+  <filter>
     <display-name>GuiceFilter</display-name>
     <filter-name>GuiceFilter</filter-name>
     <filter-class>com.google.inject.servlet.GuiceFilter</filter-class>
   </filter>
   <filter-mapping>
     <filter-name>GuiceFilter</filter-name>
-    <url-pattern>*</url-pattern>
+    <url-pattern>/jobs/*</url-pattern>
+    <url-pattern>/scripts/*</url-pattern>
+    <url-pattern>/tasks/*</url-pattern>
+    <url-pattern>/results/*</url-pattern>
+    <url-pattern>/users/*</url-pattern>
+    <url-pattern>/workorders/*</url-pattern>
   </filter-mapping>
   <welcome-file-list>
-  	<welcome-file>index.html</welcome-file>
+    <welcome-file>index.html</welcome-file>
   </welcome-file-list>
 </web-app>

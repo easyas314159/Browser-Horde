@@ -1,19 +1,21 @@
 package com.browserhorde.server.entity;
 
 import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
 
 import com.spaceprogram.simplejpa.model.IdedTimestampedBase;
 
 @Entity
 public class Script extends IdedTimestampedBase {
+	@ManyToOne(targetEntity=User.class)
 	private User owner;
 
 	private String name;
 	private String docurl;
 	private String description;
 
-	private boolean isdebug;
-	private boolean ispublic;
+	private boolean debug;
+	private boolean shared;
 
 	// S3 File names of various script formats
 	private String original;
@@ -27,54 +29,63 @@ public class Script extends IdedTimestampedBase {
 	public void setOwner(User owner) {
 		this.owner = owner;
 	}
+
 	public String getName() {
 		return name;
 	}
 	public void setName(String name) {
 		this.name = name;
 	}
+
 	public String getDocurl() {
 		return docurl;
 	}
 	public void setDocurl(String docurl) {
 		this.docurl = docurl;
 	}
+
 	public String getDescription() {
 		return description;
 	}
 	public void setDescription(String description) {
 		this.description = description;
 	}
-	public boolean isIsdebug() {
-		return isdebug;
+
+	public boolean isDebug() {
+		return debug;
 	}
-	public void setIsdebug(boolean isdebug) {
-		this.isdebug = isdebug;
+	public void setDebug(boolean debug) {
+		this.debug = debug;
 	}
-	public boolean isIspublic() {
-		return ispublic;
+
+	public boolean isShared() {
+		return shared;
 	}
-	public void setIspublic(boolean ispublic) {
-		this.ispublic = ispublic;
+	public void setShared(boolean shared) {
+		this.shared = shared;
 	}
+
 	public String getOriginal() {
 		return original;
 	}
 	public void setOriginal(String original) {
 		this.original = original;
 	}
+
 	public String getCompressed() {
 		return compressed;
 	}
 	public void setCompressed(String compressed) {
 		this.compressed = compressed;
 	}
+
 	public String getMinified() {
 		return minified;
 	}
 	public void setMinified(String minified) {
 		this.minified = minified;
 	}
+
 	public String getMincomp() {
 		return mincomp;
 	}

@@ -7,8 +7,7 @@ import com.spaceprogram.simplejpa.model.IdedTimestampedBase;
 
 @Entity
 public class Job extends IdedTimestampedBase {
-	// TODO: This shouldn't be optional
-	@ManyToOne(targetEntity=User.class, optional=true)
+	@ManyToOne(targetEntity=User.class)
 	private User owner;
 	private String randomizer;
 
@@ -38,53 +37,60 @@ public class Job extends IdedTimestampedBase {
 	public void setName(String name) {
 		this.name = name;
 	}
+
 	public String getRandomizer() {
 		return randomizer;
 	}
 	public void setRandomizer(String randomizer) {
 		this.randomizer = randomizer;
 	}
+
 	public String getDescription() {
 		return description;
 	}
 	public void setDescription(String description) {
 		this.description = description;
 	}
+
 	public String getWebsite() {
 		return website;
 	}
 	public void setWebsite(String website) {
 		this.website = website;
 	}
+
 	public String getCallback() {
 		return callback;
 	}
 	public void setCallback(String callback) {
 		this.callback = callback;
 	}
+
 	public boolean isIspublic() {
 		return ispublic;
 	}
 	public void setIspublic(boolean ispublic) {
 		this.ispublic = ispublic;
 	}
+
 	public boolean isIsactive() {
 		return isactive;
 	}
 	public void setIsactive(boolean isactive) {
 		this.isactive = isactive;
 	}
+
 	public Integer getTimeout() {
 		return timeout;
 	}
 	public void setTimeout(Integer timeout) {
 		this.timeout = timeout;
 	}
+
 	public Script getScript() {
 		return script;
 	}
 	public void setScript(Script script) {
 		this.script = script;
 	}
-
 }

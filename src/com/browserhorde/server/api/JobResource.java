@@ -20,13 +20,14 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.browserhorde.server.api.json.ApiResponse;
 import com.browserhorde.server.api.json.ApiResponseStatus;
 import com.browserhorde.server.api.json.InvalidRequestResponse;
-import com.browserhorde.server.api.json.RequestDeniedResponse;
+import com.browserhorde.server.api.json.ResourceResponse;
 import com.browserhorde.server.entity.Job;
 import com.google.inject.Inject;
 import com.google.inject.servlet.RequestScoped;
@@ -45,12 +46,11 @@ public class JobResource {
 
 		// TODO: This needs to filter jobs by the user that owns them
 		if(response == null) {
-
 			Query query = entityManager.createQuery(
 					"select * from " + Job.class.getName()
 				);
 			List<?> results = query.getResultList();
-			response = new RequestDeniedResponse();
+			response = new ResourceResponse(results);
 		}
 		return Response.ok(response).build();
 	}
@@ -59,26 +59,27 @@ public class JobResource {
 	@Path("{id}")
 	public Response getJob(@PathParam("id") String id) {
 		ApiResponse response = null;
-		id = StringUtils.trimToNull(id);
-		if(id == null) {
-			response = new InvalidRequestResponse();
-		}
-		else {
-			Job job = entityManager.find(Job.class, id);
-			if(job == null) {
-				return Response.status(Status.NOT_FOUND).build();
-			}
-			response = new ApiResponse(ApiResponseStatus.OK);
-		}
+		
 		if(response == null) {
-			response = new RequestDeniedResponse();
+			id = StringUtils.trimToNull(id);
+			if(id == null) {
+				response = new InvalidRequestResponse();
+			}
+			else {
+				Job job = entityManager.find(Job.class, id);
+				if(job == null) {
+					return Response.status(Status.NOT_FOUND).build();
+				}
+				response = new ResourceResponse(job);
+			}
 		}
 
 		return Response.ok(response).build();
 	}
 
+	// FIXME: For some reason we aren't picking up the form params
 	@POST
-	public ApiResponse createJob(
+	public Response createJob(
 			@FormParam("name") @QueryParam("name") @DefaultValue("New Job") String name,
 			@FormParam("desc") @QueryParam("desc") String description,
 			@FormParam("website") @QueryParam("website") String website,
@@ -88,6 +89,12 @@ public class JobResource {
 			@FormParam("timeout") @QueryParam("timeout") Integer timeout
 		) {
 
+		ApiResponse response = null;
+
+		// TODO: If the user isn't logged in then request denied
+		// response = new RequestDeniedResponse()
+
+		// TODO: Some error checking here would be nice
 		Job job = new Job();
 		job.setName(name);
 		job.setDescription(description);
@@ -97,21 +104,36 @@ public class JobResource {
 		job.setIsactive(isactive);
 		job.setTimeout(timeout);
 
+		// TODO: Check to make sure it successfully persisted
 		entityManager.persist(job);
-		String id = job.getId();
+		response = new ResourceResponse(job);
 
-		return new RequestDeniedResponse();
+		return Response.ok(response).build();
 	}
 
 	@PUT
 	@Path("{id}")
 	public ApiResponse updateJob(@PathParam("id") String id) {
-		return new RequestDeniedResponse();
+		// TODO: If the user isn't logged in then request denied
+		throw new NotImplementedException();
 	}
 
 	@DELETE
 	@Path("{id}")
-	public ApiResponse deleteJob(@PathParam("id") String id) {
-		return new RequestDeniedResponse();
+	public Response deleteJob(@PathParam("id") String id) {
+		ApiResponse response = null;
+
+		// TODO: If the user isn't logged in then request denied
+		if(response == null) {
+			Job job = entityManager.find(Job.class, id);
+			if(job == null) {
+				response = new InvalidRequestResponse();
+			}
+			else {
+				entityManager.remove(job);
+				response = new ApiResponse(ApiResponseStatus.OK);
+			}
+		}
+		return Response.ok(response).build();
 	}
 }

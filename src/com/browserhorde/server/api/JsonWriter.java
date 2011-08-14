@@ -13,28 +13,25 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyWriter;
 import javax.ws.rs.ext.Provider;
 
-import com.browserhorde.server.api.json.ApiResponse;
 import com.browserhorde.server.util.GsonUtils;
 import com.google.gson.Gson;
 
 @Provider
 @Produces(MediaType.APPLICATION_JSON)
-public class ApiMessageBodyWriter implements MessageBodyWriter<ApiResponse> {
+public class JsonWriter implements MessageBodyWriter<Object> {
 
 	@Override
-	public long getSize(ApiResponse response, Class<?> clazz, Type type,
-			Annotation[] a, MediaType mediaType) {
+	public long getSize(Object response, Class<?> clazz, Type type, Annotation[] a, MediaType mediaType) {
 		return -1;
 	}
 
 	@Override
-	public boolean isWriteable(Class<?> clazz, Type type, Annotation[] a,
-			MediaType mediaType) {
-		return ApiResponse.class.isAssignableFrom(clazz);
+	public boolean isWriteable(Class<?> clazz, Type type, Annotation[] a, MediaType mediaType) {
+		return Object.class.isAssignableFrom(clazz);
 	}
 
 	@Override
-	public void writeTo(ApiResponse response, Class<?> clazz, Type type,
+	public void writeTo(Object response, Class<?> clazz, Type type,
 			Annotation[] a, MediaType mediaType,
 			MultivaluedMap<String, Object> headers, OutputStream output)
 			throws IOException, WebApplicationException {
