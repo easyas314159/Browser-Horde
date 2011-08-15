@@ -13,9 +13,11 @@ public class Task extends IdedTimestampedBase {
 	public String randomizer;
 
 	private boolean ispublic;
-	private boolean isactive;
+	private boolean active;
 
 	private Integer timeout;
+
+	// TODO: Were do we keep the data?
 
 	public Job getJob() {
 		return job;
@@ -23,24 +25,28 @@ public class Task extends IdedTimestampedBase {
 	public void setJob(Job job) {
 		this.job = job;
 	}
+
 	public String getRandomizer() {
 		return randomizer;
 	}
 	public void setRandomizer(String randomizer) {
 		this.randomizer = randomizer;
 	}
+
 	public boolean isIspublic() {
 		return ispublic;
 	}
 	public void setIspublic(boolean ispublic) {
 		this.ispublic = ispublic;
 	}
-	public boolean isIsactive() {
-		return isactive;
+
+	public boolean isActive() {
+		return active;
 	}
-	public void setIsactive(boolean isactive) {
-		this.isactive = isactive;
+	public void setActive(boolean active) {
+		this.active = active;
 	}
+
 	public Integer getTimeout() {
 		return timeout;
 	}

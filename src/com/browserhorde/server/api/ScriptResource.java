@@ -1,11 +1,20 @@
 package com.browserhorde.server.api;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.io.Writer;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 import java.util.concurrent.ExecutorService;
+import java.util.zip.GZIPOutputStream;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
@@ -32,21 +41,33 @@ import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIUtils;
 import org.apache.log4j.Logger;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.api.json.ApiResponse;
+import com.browserhorde.server.api.json.ApiResponseStatus;
 import com.browserhorde.server.api.json.InvalidRequestResponse;
 import com.browserhorde.server.api.json.ResourceResponse;
 import com.browserhorde.server.entity.Script;
 import com.google.inject.Inject;
+import com.yahoo.platform.yui.compressor.JavaScriptCompressor;
 
 @Path("scripts")
 @Produces(MediaType.APPLICATION_JSON)
 public class ScriptResource {
+	private static final String BASE_PATH = "scripts";
+
+	private static final String FILE_ORIGINAL = ".js";
+	private static final String FILE_MINIFIED = "min.js";
+	private static final String FILE_COMPRESSED = ".js.gz";
+	private static final String FILE_MINIFIED_COMPRESSED = "min.js.gz";
+
 	private final Logger log = Logger.getLogger(getClass());
 
 	@Context private ServletContext context;
@@ -54,6 +75,8 @@ public class ScriptResource {
 	@Inject private EntityManager entityManager;
 	@Inject private ExecutorService executorService;
 	@Inject private FileItemFactory fileFactory;
+
+	@Inject private AmazonS3 awsS3;
 
 	@GET
 	public Response listScripts(
@@ -97,7 +120,7 @@ public class ScriptResource {
 
 	@GET
 	@Path("{id}.js")
-	@Produces("application/javascript")
+	@Produces({"application/javascript", "text/javascript"})
 	public Response getScriptContent(@Context HttpHeaders headers, @PathParam("id") String id) {
 		id = StringUtils.trimToNull(id);
 		if(id == null) {
@@ -132,24 +155,19 @@ public class ScriptResource {
 
 		boolean gzip = false;
 		boolean mini = !script.isDebug();
-		String res = null;
 
-		// TODO: This logic ignores the presence of a minified version
-		if(gzip) {
-			res = script.getCompressed();
-		}
-		if(res == null) {
-			res = script.getOriginal();
-			if(res == null) {
-				// TODO: Should this return something other than 404?
-				return Response.status(Status.NOT_FOUND).build();
-			}
-		}
+		String bucket = context.getInitParameter(ServletInitOptions.AWS_S3_BUCKET);
+		String res = gzip ? (mini ? FILE_MINIFIED_COMPRESSED : FILE_COMPRESSED) : (mini ? FILE_MINIFIED : FILE_ORIGINAL);
+		String key = String.format(
+				"%s/$s/$s",
+				BASE_PATH,
+				script.getId(),
+				res
+			);
 
-		// TODO: If we are using cloud front then we need to be able to change the domain
 		try {
-			String path = String.format("/%s/%s", context.getInitParameter(ServletInitOptions.AWS_S3_BUCKET), res);
-			URI uriS3 = URIUtils.createURI("https", "s3.amazon.com", -1, path, null, null);
+			// TODO: If we are using cloud front then we need to be able to change the domain
+			URI uriS3 = URIUtils.createURI("https", "s3.amazon.com", -1, bucket + "/" + key, null, null);
 			return Response.status(302).location(uriS3).build();
 		}
 		catch(URISyntaxException ex) {
@@ -170,27 +188,66 @@ public class ScriptResource {
 			@FormParam("name") @QueryParam("name") String name,
 			@FormParam("desc") @QueryParam("desc") String desc,
 			@FormParam("docurl") @QueryParam("docurl") String docurl,
-			@FormParam("debug") @QueryParam("debug") String debug,
-			@FormParam("shared") @QueryParam("shared") String shared
+			@DefaultValue("true") @FormParam("debug") @QueryParam("debug") Boolean debug,
+			@DefaultValue("false") @FormParam("shared") @QueryParam("shared") Boolean shared
 		) {
+		ApiResponse response = null;
 		// TODO: Check user permissions
 
 		ServletFileUpload upload = new ServletFileUpload(fileFactory);
 		try {
+			Map<String, String> params = new HashMap<String, String>();
+			List<FileItem> scripts = new Vector<FileItem>();
 			List<FileItem> items = upload.parseRequest(request);
 			for(FileItem item : items) {
 				if(item.isFormField()) {
-					String n = item.getFieldName();
-					String v = item.getString();
+					params.put(
+							item.getFieldName(),
+							item.getString()
+						);
 				}
 				else {
-					
+					scripts.add(item);
 				}
+			}
+
+			if(scripts.size() == 1) {
+				// TODO: Overwrite params with form fields
+
+				Script script = new Script();
+
+				// TODO: Set script owner
+				script.setName(name);
+				script.setDescription(desc);
+				script.setDocurl(docurl);
+
+				script.setDebug(debug);
+				script.setShared(shared);
+
+				entityManager.persist(script);
+
+				try {
+					// TODO: Parse uploaded script and do a security check
+					FileItem file = scripts.get(0);
+					storeScript(
+							file.get(),
+							context.getInitParameter(ServletInitOptions.AWS_S3_BUCKET),
+							script.getId()
+						);
+				}
+				catch(IOException ex) {
+					log.warn("Store failed!", ex);
+				}
+
+				response = new ResourceResponse(script);
+			}
+			else {
+				response = new InvalidRequestResponse();
 			}
 		} catch(FileUploadException ex) {
 			log.info("Script upload failed!", ex);
 		}
-		return Response.ok().build();
+		return Response.ok(response).build();
 	}
 
 	@PUT
@@ -202,6 +259,141 @@ public class ScriptResource {
 	@DELETE
 	@Path("{id}")
 	public Response deleteScript(@PathParam("id") String id) {
-		throw new NotImplementedException();
+		ApiResponse response = null;
+
+		// TODO: If the user isn't logged in then request denied
+		// TODO: Be careful when deleting scripts especially public ones
+		if(response == null) {
+			Script script = entityManager.find(Script.class, id);
+			if(script == null) {
+				response = new InvalidRequestResponse();
+			}
+			else {
+				entityManager.remove(script);
+				response = new ApiResponse(ApiResponseStatus.OK);
+			}
+		}
+
+		return Response.ok(response).build();
 	}
+
+	private void storeScript(byte [] data, String bucket, String id) throws IOException {
+		String prefix = String.format("scripts/%s", id);
+
+		final String keyOrig = String.format("%s/%s", prefix, FILE_ORIGINAL);
+		final String keyMini = String.format("%s/%s", prefix, FILE_MINIFIED);
+		final String keyComp = String.format("%s/%s", prefix, FILE_COMPRESSED);
+		final String keyCompMini = String.format("%s/%s", prefix, FILE_MINIFIED_COMPRESSED);
+
+		final ObjectMetadata metaRaw = new ObjectMetadata();
+		final ObjectMetadata metaComp = new ObjectMetadata();
+
+		metaRaw.setContentType("application/javascript");
+		metaComp.setContentType("application/javascript");
+		metaComp.setContentEncoding("gzip");
+
+		byte [] tempBuffer;
+		InputStream tempInput;
+
+		uploadData(data, bucket, keyOrig, metaRaw);
+
+		final ByteArrayOutputStream dupGzipOrig = new ByteArrayOutputStream();
+		final GZIPOutputStream gzipOrig = new GZIPOutputStream(dupGzipOrig);
+
+		gzipOrig.write(data);
+		gzipOrig.close();
+
+		tempBuffer = dupGzipOrig.toByteArray();
+		uploadData(tempBuffer, bucket, keyComp, metaComp);
+
+		tempInput = new ByteArrayInputStream(data);
+		final ByteArrayOutputStream dupMini = new ByteArrayOutputStream();
+
+		Reader tempReader = new InputStreamReader(tempInput);
+		Writer tempWriter = new OutputStreamWriter(dupMini);
+
+		JavaScriptCompressor compressor = new JavaScriptCompressor(tempReader, null);
+		compressor.compress(tempWriter, 16000, true, false, true, false);
+
+		tempReader.close();
+		tempWriter.close();
+
+		tempBuffer = dupMini.toByteArray();
+		uploadData(tempBuffer, bucket, keyMini, metaRaw);
+
+		final ByteArrayOutputStream dupGzipMini = new ByteArrayOutputStream();
+		final GZIPOutputStream gzipMini = new GZIPOutputStream(dupGzipMini);
+
+		gzipMini.write(tempBuffer);
+		gzipMini.close();
+
+		uploadData(dupGzipMini.toByteArray(), bucket, keyCompMini, metaComp);
+	}
+
+	private void uploadData(byte [] buffer, String bucket, String key, ObjectMetadata meta) throws IOException {
+		meta.setContentLength(buffer.length);
+		ByteArrayInputStream input = new ByteArrayInputStream(buffer);
+		awsS3.putObject(bucket, key, input, meta);
+		input.close();
+	}
+	
+	/*
+	private void storeScript(InputStream source, String bucket, String id) throws IOException {
+		String prefix = String.format("scripts/%s", id);
+
+		final String keyOrig = String.format("%s/%s", prefix, FILE_ORIGINAL);
+		final String keyMini = String.format("%s/%s", prefix, FILE_MINIFIED);
+		final String keyComp = String.format("%s/%s", prefix, FILE_COMPRESSED);
+		final String keyCompMini = String.format("%s/%s", prefix, FILE_MINIFIED_COMPRESSED);
+
+		// Do some crazy input stream branching
+		final PipeStream pipeOrig = new PipeStream();
+		final PipeStream pipeComp = new PipeStream();
+		final PipeStream pipeMini = new PipeStream();
+		final PipeStream pipeCompMini = new PipeStream();
+
+		final GZIPOutputStream gzipOrig = new GZIPOutputStream(pipeComp.getOutputStream());
+		final GZIPOutputStream gzipMini = new GZIPOutputStream(pipeCompMini.getOutputStream());
+
+		final TeeOutputStream teeBranch = new TeeOutputStream(gzipOrig, pipeOrig.getOutputStream());
+		final TeeInputStream teeOrig = new TeeInputStream(source, teeBranch, true);
+		final TeeInputStream teeMini = new TeeInputStream(pipeMini.getInputStream(), gzipMini, true);
+
+		final ObjectMetadata metaRaw = new ObjectMetadata();
+		final ObjectMetadata metaComp = new ObjectMetadata();
+
+		metaRaw.setContentType("application/javascript");
+		metaComp.setContentType("application/javascript");
+		metaComp.setContentEncoding("gzip");
+
+		// Perform crazy async file upload
+		// FIXME: This locks up if there are less than 3 executors in the thread pool
+		Future<PutObjectResult> fOrig = executorService.submit(new AmazonS3AsyncPutObject(
+				awsS3, new PutObjectRequest(bucket, keyOrig, teeOrig, metaRaw)
+			));
+		Future<PutObjectResult> fComp = executorService.submit(new AmazonS3AsyncPutObject(
+				awsS3, new PutObjectRequest(bucket, keyComp, pipeComp.getInputStream(), metaComp)
+			));
+		Future<Void> fMinify = executorService.submit(new Callable<Void>() {
+			@Override
+			public Void call() throws Exception {
+				Writer writerMini = new OutputStreamWriter(pipeMini.getOutputStream());
+				Reader readerMini = new InputStreamReader(pipeOrig.getInputStream());
+				JavaScriptCompressor compressor = new JavaScriptCompressor(readerMini, null);
+				compressor.compress(writerMini, 16000, true, false, true, false);
+
+				readerMini.close();
+				writerMini.close();
+
+				return null;
+			}
+		});
+		Future<PutObjectResult> fMini = executorService.submit(new AmazonS3AsyncPutObject(
+				awsS3, new PutObjectRequest(bucket, keyMini, teeMini, metaRaw)
+			));
+		Future<PutObjectResult> fMiniComp = executorService.submit(new AmazonS3AsyncPutObject(
+				awsS3, new PutObjectRequest(bucket, keyCompMini, pipeCompMini.getInputStream(), metaComp)
+			));
+	}
+	 */
 }

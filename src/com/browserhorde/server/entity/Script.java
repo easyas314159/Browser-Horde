@@ -17,12 +17,6 @@ public class Script extends IdedTimestampedBase {
 	private boolean debug;
 	private boolean shared;
 
-	// S3 File names of various script formats
-	private String original;
-	private String compressed;
-	private String minified;
-	private String mincomp;
-
 	public User getOwner() {
 		return owner;
 	}
@@ -63,33 +57,5 @@ public class Script extends IdedTimestampedBase {
 	}
 	public void setShared(boolean shared) {
 		this.shared = shared;
-	}
-
-	public String getOriginal() {
-		return original;
-	}
-	public void setOriginal(String original) {
-		this.original = original;
-	}
-
-	public String getCompressed() {
-		return compressed;
-	}
-	public void setCompressed(String compressed) {
-		this.compressed = compressed;
-	}
-
-	public String getMinified() {
-		return minified;
-	}
-	public void setMinified(String minified) {
-		this.minified = minified;
-	}
-
-	public String getMincomp() {
-		return mincomp;
-	}
-	public void setMincomp(String mincomp) {
-		this.mincomp = mincomp;
 	}
 }

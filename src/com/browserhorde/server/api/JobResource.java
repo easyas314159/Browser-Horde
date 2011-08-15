@@ -14,10 +14,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -29,6 +27,7 @@ import com.browserhorde.server.api.json.ApiResponseStatus;
 import com.browserhorde.server.api.json.InvalidRequestResponse;
 import com.browserhorde.server.api.json.ResourceResponse;
 import com.browserhorde.server.entity.Job;
+import com.browserhorde.server.entity.Script;
 import com.google.inject.Inject;
 import com.google.inject.servlet.RequestScoped;
 
@@ -41,7 +40,7 @@ public class JobResource {
 	@Inject EntityManager entityManager;
 
 	@GET
-	public Response listJobs(@Context SecurityContext security) {
+	public Response listJobs() {
 		ApiResponse response = null;
 
 		// TODO: This needs to filter jobs by the user that owns them
@@ -84,6 +83,7 @@ public class JobResource {
 			@FormParam("desc") @QueryParam("desc") String description,
 			@FormParam("website") @QueryParam("website") String website,
 			@FormParam("callback") @QueryParam("callback") String callback,
+			@FormParam("script") @QueryParam("script") String scriptId,
 			@FormParam("public") @QueryParam("pulic") @DefaultValue("true") boolean ispublic,
 			@FormParam("active") @QueryParam("active") @DefaultValue("false") boolean isactive,
 			@FormParam("timeout") @QueryParam("timeout") Integer timeout
@@ -94,19 +94,26 @@ public class JobResource {
 		// TODO: If the user isn't logged in then request denied
 		// response = new RequestDeniedResponse()
 
-		// TODO: Some error checking here would be nice
-		Job job = new Job();
-		job.setName(name);
-		job.setDescription(description);
-		job.setWebsite(website);
-		job.setCallback(callback);
-		job.setIspublic(ispublic);
-		job.setIsactive(isactive);
-		job.setTimeout(timeout);
+		Script script = entityManager.find(Script.class, scriptId);
+		if(script == null) {
+			response = new InvalidRequestResponse();
+		}
+		else {
+			// TODO: Some input validation here would be nice
+			Job job = new Job();
+			job.setName(name);
+			job.setDescription(description);
+			job.setWebsite(website);
+			job.setCallback(callback);
+			job.setIspublic(ispublic);
+			job.setIsactive(isactive);
+			job.setTimeout(timeout);
+			job.setScript(script);
 
-		// TODO: Check to make sure it successfully persisted
-		entityManager.persist(job);
-		response = new ResourceResponse(job);
+			// TODO: Check to make sure it successfully persisted
+			entityManager.persist(job);
+			response = new ResourceResponse(job);
+		}
 
 		return Response.ok(response).build();
 	}

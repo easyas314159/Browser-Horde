@@ -1,7 +1,7 @@
 package com.browserhorde.server.api.json;
 
 public class ResourceResponse extends ApiResponse {
-	private Object resource;
+	private final Object resource;
 	
 	public ResourceResponse(Object resource) {
 		super(ApiResponseStatus.OK);
@@ -11,8 +11,5 @@ public class ResourceResponse extends ApiResponse {
 
 	public Object getResource() {
 		return resource;
-	}
-	public void setResource(Object resource) {
-		this.resource = resource;
 	}
 }
