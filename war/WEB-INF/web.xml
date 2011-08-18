@@ -34,6 +34,17 @@
   <listener>
     <listener-class>com.browserhorde.server.DependencyInjection</listener-class>
   </listener>
+
+  <filter>
+    <display-name>ErrorTrap</display-name>
+    <filter-name>ErrorTrap</filter-name>
+    <filter-class>com.browserhorde.server.ErrorTrap</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>ErrorTrap</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
   <filter>
     <display-name>AccessControlFilter</display-name>
     <filter-name>AccessControlFilter</filter-name>
@@ -43,10 +54,12 @@
     <filter-name>AccessControlFilter</filter-name>
     <url-pattern>/*</url-pattern>
   </filter-mapping>
+
   <filter>
     <display-name>GuiceFilter</display-name>
     <filter-name>GuiceFilter</filter-name>
-    <filter-class>com.google.inject.servlet.GuiceFilter</filter-class>
+    <!-- <filter-class>com.google.inject.servlet.GuiceFilter</filter-class>-->
+    <filter-class>com.browserhorde.server.IntermediateGuiceFilter</filter-class>
   </filter>
   <filter-mapping>
     <filter-name>GuiceFilter</filter-name>
@@ -57,6 +70,7 @@
     <url-pattern>/users/*</url-pattern>
     <url-pattern>/workorders/*</url-pattern>
   </filter-mapping>
+
   <welcome-file-list>
     <welcome-file>index.html</welcome-file>
   </welcome-file-list>

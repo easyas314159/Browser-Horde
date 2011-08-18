@@ -7,7 +7,6 @@ import com.spaceprogram.simplejpa.model.IdedTimestampedBase;
 
 @Entity
 public class Task extends IdedTimestampedBase {
-	@ManyToOne(targetEntity=Job.class)
 	public Job job;
 
 	public String randomizer;
@@ -19,6 +18,7 @@ public class Task extends IdedTimestampedBase {
 
 	// TODO: Were do we keep the data?
 
+	@ManyToOne
 	public Job getJob() {
 		return job;
 	}

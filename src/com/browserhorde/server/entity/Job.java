@@ -7,7 +7,6 @@ import com.spaceprogram.simplejpa.model.IdedTimestampedBase;
 
 @Entity
 public class Job extends IdedTimestampedBase {
-	@ManyToOne(targetEntity=User.class)
 	private User owner;
 	private String randomizer;
 
@@ -21,9 +20,9 @@ public class Job extends IdedTimestampedBase {
 
 	private Integer timeout;
 
-	@ManyToOne(targetEntity=Script.class)
 	private Script script;
 
+	@ManyToOne
 	public User getOwner() {
 		return owner;
 	}
@@ -87,6 +86,7 @@ public class Job extends IdedTimestampedBase {
 		this.timeout = timeout;
 	}
 
+	@ManyToOne
 	public Script getScript() {
 		return script;
 	}

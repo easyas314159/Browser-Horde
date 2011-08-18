@@ -14,6 +14,8 @@ public class EntityManagerProvider implements Provider<EntityManager> {
 		if(managerFactory == null) {
 			return null;
 		}
+
+		// TODO: the new entity manager needs to be closed after it leaves the request scope
 		return managerFactory.createEntityManager();
 	}
 }

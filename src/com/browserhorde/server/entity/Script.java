@@ -7,7 +7,6 @@ import com.spaceprogram.simplejpa.model.IdedTimestampedBase;
 
 @Entity
 public class Script extends IdedTimestampedBase {
-	@ManyToOne(targetEntity=User.class)
 	private User owner;
 
 	private String name;
@@ -17,6 +16,7 @@ public class Script extends IdedTimestampedBase {
 	private boolean debug;
 	private boolean shared;
 
+	@ManyToOne
 	public User getOwner() {
 		return owner;
 	}

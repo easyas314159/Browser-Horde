@@ -29,6 +29,8 @@ import com.browserhorde.server.inject.EntityManagerProvider;
 import com.browserhorde.server.inject.ExecutorServiceProvider;
 import com.browserhorde.server.inject.FileItemFactoryProvider;
 import com.browserhorde.server.inject.MemcachedClientProvider;
+import com.browserhorde.server.inject.RandomizerProvider;
+import com.browserhorde.server.util.Randomizer;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Singleton;
@@ -85,6 +87,9 @@ public class DependencyInjection extends GuiceServletContextListener {
 							
 							bind(FileItemFactory.class)
 								.toProvider(FileItemFactoryProvider.class)
+								.in(Singleton.class);
+							bind(Randomizer.class)
+								.toProvider(RandomizerProvider.class)
 								.in(Singleton.class);
 
 							Map<String, String> params = new HashMap<String, String>();

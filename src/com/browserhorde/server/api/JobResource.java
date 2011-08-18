@@ -13,7 +13,6 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -28,6 +27,7 @@ import com.browserhorde.server.api.json.InvalidRequestResponse;
 import com.browserhorde.server.api.json.ResourceResponse;
 import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Script;
+import com.browserhorde.server.util.Randomizer;
 import com.google.inject.Inject;
 import com.google.inject.servlet.RequestScoped;
 
@@ -38,6 +38,7 @@ public class JobResource {
 	private final Logger log = Logger.getLogger(getClass());
 
 	@Inject EntityManager entityManager;
+	@Inject Randomizer randomizer;
 
 	@GET
 	public Response listJobs() {
@@ -58,7 +59,7 @@ public class JobResource {
 	@Path("{id}")
 	public Response getJob(@PathParam("id") String id) {
 		ApiResponse response = null;
-		
+
 		if(response == null) {
 			id = StringUtils.trimToNull(id);
 			if(id == null) {
@@ -79,14 +80,14 @@ public class JobResource {
 	// FIXME: For some reason we aren't picking up the form params
 	@POST
 	public Response createJob(
-			@FormParam("name") @QueryParam("name") @DefaultValue("New Job") String name,
-			@FormParam("desc") @QueryParam("desc") String description,
-			@FormParam("website") @QueryParam("website") String website,
-			@FormParam("callback") @QueryParam("callback") String callback,
-			@FormParam("script") @QueryParam("script") String scriptId,
-			@FormParam("public") @QueryParam("pulic") @DefaultValue("true") boolean ispublic,
-			@FormParam("active") @QueryParam("active") @DefaultValue("false") boolean isactive,
-			@FormParam("timeout") @QueryParam("timeout") Integer timeout
+			@FormParam("name") @DefaultValue("New Job") String name,
+			@FormParam("desc") String description,
+			@FormParam("website") String website,
+			@FormParam("callback") String callback,
+			@FormParam("script") String scriptId,
+			@FormParam("public") @DefaultValue("true") boolean ispublic,
+			@FormParam("active") @DefaultValue("false") boolean isactive,
+			@FormParam("timeout") @DefaultValue("600") Integer timeout
 		) {
 
 		ApiResponse response = null;
@@ -94,25 +95,33 @@ public class JobResource {
 		// TODO: If the user isn't logged in then request denied
 		// response = new RequestDeniedResponse()
 
-		Script script = entityManager.find(Script.class, scriptId);
-		if(script == null) {
+		scriptId = StringUtils.trimToNull(scriptId);
+		if(scriptId == null) {
 			response = new InvalidRequestResponse();
 		}
 		else {
-			// TODO: Some input validation here would be nice
-			Job job = new Job();
-			job.setName(name);
-			job.setDescription(description);
-			job.setWebsite(website);
-			job.setCallback(callback);
-			job.setIspublic(ispublic);
-			job.setIsactive(isactive);
-			job.setTimeout(timeout);
-			job.setScript(script);
-
-			// TODO: Check to make sure it successfully persisted
-			entityManager.persist(job);
-			response = new ResourceResponse(job);
+			Script script = entityManager.find(Script.class, scriptId);
+			if(script == null) {
+				response = new InvalidRequestResponse();
+			}
+			else {
+				// TODO: Some input validation here would be nice
+				Job job = new Job();
+	
+				job.setRandomizer(randomizer.nextRandomizer());
+				job.setName(name);
+				job.setDescription(description);
+				job.setWebsite(website);
+				job.setCallback(callback);
+				job.setIspublic(ispublic);
+				job.setIsactive(isactive);
+				job.setTimeout(timeout);
+				job.setScript(script);
+	
+				// TODO: Check to make sure it successfully persisted
+				entityManager.persist(job);
+				response = new ResourceResponse(job);
+			}
 		}
 
 		return Response.ok(response).build();
@@ -141,6 +150,8 @@ public class JobResource {
 				response = new ApiResponse(ApiResponseStatus.OK);
 			}
 		}
+
+		// TODO: Delete any associated tasks
 		return Response.ok(response).build();
 	}
 }
