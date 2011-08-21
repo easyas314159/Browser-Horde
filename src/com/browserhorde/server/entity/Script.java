@@ -3,18 +3,18 @@ package com.browserhorde.server.entity;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 
-import com.spaceprogram.simplejpa.model.IdedTimestampedBase;
+import com.google.gson.annotations.Expose;
 
 @Entity
-public class Script extends IdedTimestampedBase {
-	private User owner;
+public class Script extends BaseObject {
+	@Expose private User owner;
 
-	private String name;
-	private String docurl;
-	private String description;
+	@Expose private String name;
+	@Expose private String docurl;
+	@Expose private String description;
 
-	private boolean debug;
-	private boolean shared;
+	@Expose private boolean debug;
+	@Expose private boolean shared;
 
 	@ManyToOne
 	public User getOwner() {

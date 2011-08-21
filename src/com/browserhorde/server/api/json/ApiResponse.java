@@ -1,8 +1,10 @@
 package com.browserhorde.server.api.json;
 
+import com.google.gson.annotations.Expose;
+
 
 public class ApiResponse {
-	private final ApiResponseStatus status;
+	@Expose private final ApiResponseStatus status;
 
 	public ApiResponse(ApiResponseStatus status) {
 		this.status = status;

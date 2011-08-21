@@ -2,6 +2,7 @@ package com.browserhorde.server;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 
 import javax.persistence.EntityManager;
@@ -29,13 +30,16 @@ import com.browserhorde.server.inject.EntityManagerProvider;
 import com.browserhorde.server.inject.ExecutorServiceProvider;
 import com.browserhorde.server.inject.FileItemFactoryProvider;
 import com.browserhorde.server.inject.MemcachedClientProvider;
+import com.browserhorde.server.inject.RandomProvider;
 import com.browserhorde.server.inject.RandomizerProvider;
+import com.browserhorde.server.security.AuthenticationFilter;
 import com.browserhorde.server.util.Randomizer;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Singleton;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.RequestScoped;
+import com.sun.jersey.api.container.filter.RolesAllowedResourceFilterFactory;
 import com.sun.jersey.api.core.PackagesResourceConfig;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
@@ -88,6 +92,9 @@ public class DependencyInjection extends GuiceServletContextListener {
 							bind(FileItemFactory.class)
 								.toProvider(FileItemFactoryProvider.class)
 								.in(Singleton.class);
+							bind(Random.class)
+								.toProvider(RandomProvider.class)
+								.in(RequestScoped.class);
 							bind(Randomizer.class)
 								.toProvider(RandomizerProvider.class)
 								.in(Singleton.class);
@@ -97,8 +104,16 @@ public class DependencyInjection extends GuiceServletContextListener {
 			                		PackagesResourceConfig.PROPERTY_PACKAGES,
 			                		"com.browserhorde.server.api;com.browserhorde.server.aws"
 			                	);
+			                params.put(
+			                		"com.sun.jersey.spi.container.ResourceFilters",
+			                		RolesAllowedResourceFilterFactory.class.getName()
+			                	);
+
+			                filter("/*").through(AuthenticationFilter.class);
+
 							serve("/*")
-								.with(GuiceContainer.class, params);
+								.with(GuiceContainer.class, params)
+								;
 						}
 						
 					}

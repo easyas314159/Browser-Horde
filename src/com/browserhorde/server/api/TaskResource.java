@@ -38,18 +38,30 @@ public class TaskResource {
 
 	@Inject EntityManager entityManager;
 	@Inject Randomizer randomizer;
-	
+
 	@GET
-	public Response listTasks() {
+	@Path("{job}")
+	public Response listTasks(@PathParam("job") String jobId) {
+		Job job = null;
 		ApiResponse response = null;
 
-		// TODO: This should filter by job id
+		jobId = StringUtils.trimToNull(jobId);
+		if(jobId == null) {
+			response = new InvalidRequestResponse();
+		}
+		else {
+			job = entityManager.find(Job.class, jobId);
+			if(job == null) {
+				response = new InvalidRequestResponse();
+			}
+		}
+
 		if(response == null) {
 			Query query = entityManager.createQuery(
 					"select * from " + Task.class.getName()
-					//+ " where job=:job"
+					+ " where job=:job"
 				);
-			//query.setParameter("job", id);
+			query.setParameter("job", job);
 			List<?> results = query.getResultList();
 			response = new ResourceResponse(results);
 		}
@@ -58,22 +70,25 @@ public class TaskResource {
 	}
 
 	@GET
-	@Path("{id}")
-	public Response getTask(@PathParam("id") String id) {
+	@Path("{job}/{task}")
+	public Response getTask(
+			@PathParam("job") String jobId,
+			@PathParam("task") String taskId
+		) {
 		ApiResponse response = null;
 
+		jobId = StringUtils.trimToNull(jobId);
+		taskId = StringUtils.trimToNull(taskId);
+		if(jobId == null || taskId == null) {
+			response = new InvalidRequestResponse();
+		}
+
 		if(response == null) {
-			id = StringUtils.trimToNull(id);
-			if(id == null) {
-				response = new InvalidRequestResponse();
+			Task task = entityManager.find(Task.class, taskId);
+			if(task == null || !task.getJob().getId().equals(jobId)) {
+				return Response.status(Status.NOT_FOUND).build();
 			}
-			else {
-				Task task = entityManager.find(Task.class, id);
-				if(id == null) {
-					return Response.status(Status.NOT_FOUND).build();
-				}
-				response = new ResourceResponse(task);
-			}
+			response = new ResourceResponse(task);
 		}
 
 		return Response.ok(response).build();
@@ -82,9 +97,9 @@ public class TaskResource {
 	@POST
 	public Response createTask(
 			@FormParam("job") String jobId,
-			@DefaultValue("-1") @FormParam("timeout") Integer timeout,
-			@DefaultValue("true") @FormParam("active") Boolean active,
-			@DefaultValue("true") @FormParam("public") Boolean freeforall
+			@FormParam("timeout") Integer timeout,
+			@FormParam("active") @DefaultValue("true") Boolean active,
+			@FormParam("public") @DefaultValue("true") Boolean freeforall
 		) {
 
 		ApiResponse response = null;

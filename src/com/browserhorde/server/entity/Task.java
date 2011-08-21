@@ -3,18 +3,18 @@ package com.browserhorde.server.entity;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 
-import com.spaceprogram.simplejpa.model.IdedTimestampedBase;
+import com.google.gson.annotations.Expose;
 
 @Entity
-public class Task extends IdedTimestampedBase {
-	public Job job;
+public class Task extends BaseObject {
+	@Expose public Job job;
 
 	public String randomizer;
 
-	private boolean ispublic;
-	private boolean active;
+	@Expose private boolean ispublic;
+	@Expose private boolean active;
 
-	private Integer timeout;
+	@Expose private Integer timeout;
 
 	// TODO: Were do we keep the data?
 

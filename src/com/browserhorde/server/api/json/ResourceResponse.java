@@ -1,8 +1,10 @@
 package com.browserhorde.server.api.json;
 
+import com.google.gson.annotations.Expose;
+
 public class ResourceResponse extends ApiResponse {
-	private final Object resource;
-	
+	@Expose private final Object resource;
+
 	public ResourceResponse(Object resource) {
 		super(ApiResponseStatus.OK);
 

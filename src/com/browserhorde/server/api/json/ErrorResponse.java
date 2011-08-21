@@ -1,8 +1,10 @@
 package com.browserhorde.server.api.json;
 
+import com.google.gson.annotations.Expose;
+
 
 public class ErrorResponse extends ApiResponse {
-	private final String message;
+	@Expose private final String message;
 
 	public ErrorResponse(ApiResponseStatus status) {
 		this(status, null);
