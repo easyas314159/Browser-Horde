@@ -19,7 +19,6 @@ import com.google.gson.Gson;
 @Provider
 @Produces(MediaType.APPLICATION_JSON)
 public class JsonWriter implements MessageBodyWriter<Object> {
-
 	@Override
 	public long getSize(Object response, Class<?> clazz, Type type, Annotation[] a, MediaType mediaType) {
 		return -1;

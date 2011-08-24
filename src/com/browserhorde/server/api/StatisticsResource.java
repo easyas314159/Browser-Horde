@@ -1,20 +1,16 @@
 package com.browserhorde.server.api;
 
-import javax.annotation.security.RolesAllowed;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.browserhorde.server.security.Roles;
-
-@Path("results")
+@Path("stats")
 @Produces(MediaType.APPLICATION_JSON)
-public class ResultResource {
+public class StatisticsResource {
 	@GET
-	@RolesAllowed(Roles.REGISTERED)
-	public Response listResults() {
+	public Response statistics() {
 		return Response.ok().build();
 	}
 }

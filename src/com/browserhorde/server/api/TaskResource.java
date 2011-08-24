@@ -2,6 +2,7 @@ package com.browserhorde.server.api;
 
 import java.util.List;
 
+import javax.annotation.security.RolesAllowed;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.ws.rs.Consumes;
@@ -28,6 +29,7 @@ import com.browserhorde.server.api.json.InvalidRequestResponse;
 import com.browserhorde.server.api.json.ResourceResponse;
 import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Task;
+import com.browserhorde.server.security.Roles;
 import com.browserhorde.server.util.Randomizer;
 import com.google.inject.Inject;
 
@@ -41,6 +43,7 @@ public class TaskResource {
 
 	@GET
 	@Path("{job}")
+	@RolesAllowed(Roles.REGISTERED)
 	public Response listTasks(@PathParam("job") String jobId) {
 		Job job = null;
 		ApiResponse response = null;
@@ -95,6 +98,7 @@ public class TaskResource {
 	}
 
 	@POST
+	@RolesAllowed(Roles.REGISTERED)
 	public Response createTask(
 			@FormParam("job") String jobId,
 			@FormParam("timeout") Integer timeout,
@@ -127,18 +131,21 @@ public class TaskResource {
 
 	@POST
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	@RolesAllowed(Roles.REGISTERED)
 	public Response uploadTask() {
 		throw new NotImplementedException();
 	}
 
 	@PUT
 	@Path("{id}")
+	@RolesAllowed(Roles.REGISTERED)
 	public Response updateTask(@PathParam("id") String id) {
 		throw new NotImplementedException();
 	}
 
 	@DELETE
 	@Path("{id}")
+	@RolesAllowed(Roles.REGISTERED)
 	public Response deleteTask(@PathParam("id") String id) {
 		ApiResponse response = null;
 

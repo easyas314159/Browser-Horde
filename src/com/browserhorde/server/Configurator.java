@@ -6,7 +6,7 @@ import java.util.TimeZone;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
-import com.browserhorde.server.util.DateAdapter;
+import com.browserhorde.server.util.DateSerializer;
 import com.browserhorde.server.util.GsonUtils;
 import com.browserhorde.server.util.JsonElementSerializer;
 import com.google.gson.FieldNamingPolicy;
@@ -21,7 +21,7 @@ public class Configurator implements ServletContextListener {
 			.setPrettyPrinting()
 			.excludeFieldsWithoutExposeAnnotation()
 			.setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-			.registerTypeAdapter(Date.class, new DateAdapter())
+			.registerTypeAdapter(Date.class, new DateSerializer())
 			.registerTypeHierarchyAdapter(JsonElement.class, new JsonElementSerializer())
 			;
 	}

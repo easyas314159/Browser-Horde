@@ -17,6 +17,7 @@ import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.zip.GZIPOutputStream;
 
+import javax.annotation.security.RolesAllowed;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.servlet.ServletContext;
@@ -31,11 +32,11 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.fileupload.FileItem;
@@ -62,6 +63,8 @@ import com.browserhorde.server.api.json.ApiResponseStatus;
 import com.browserhorde.server.api.json.InvalidRequestResponse;
 import com.browserhorde.server.api.json.ResourceResponse;
 import com.browserhorde.server.entity.Script;
+import com.browserhorde.server.entity.User;
+import com.browserhorde.server.security.Roles;
 import com.google.inject.Inject;
 import com.yahoo.platform.yui.compressor.JavaScriptCompressor;
 
@@ -86,9 +89,8 @@ public class ScriptResource {
 	@Inject private AmazonS3 awsS3;
 
 	@GET
-	public Response listScripts(
-			@DefaultValue("") @QueryParam("q") String search
-		) {
+	@RolesAllowed(Roles.REGISTERED)
+	public Response listScripts() {
 		ApiResponse response = null;
 
 		// TODO: This needs to filter jobs by the user that owns them
@@ -105,6 +107,7 @@ public class ScriptResource {
 
 	@GET
 	@Path("{id}")
+	@RolesAllowed(Roles.REGISTERED)
 	public Response getScript(@PathParam("id") String id) {
 		ApiResponse response = null;
 		
@@ -183,20 +186,20 @@ public class ScriptResource {
 	}
 
 	@POST
-	@Consumes({
-			MediaType.MULTIPART_FORM_DATA,
-			MediaType.APPLICATION_FORM_URLENCODED
-		})
+	@Consumes({MediaType.MULTIPART_FORM_DATA})
+	//@RolesAllowed(Roles.REGISTERED)
 	public Response createScript(
+			@Context SecurityContext sec,
 			@Context HttpServletRequest request,
-			@FormParam("name") @QueryParam("name") String name,
-			@FormParam("desc") @QueryParam("desc") String desc,
-			@FormParam("docurl") @QueryParam("docurl") String docurl,
-			@DefaultValue("true") @FormParam("debug") @QueryParam("debug") Boolean debug,
-			@DefaultValue("false") @FormParam("shared") @QueryParam("shared") Boolean shared
+			@FormParam("name") @DefaultValue("New Script") String name,
+			@FormParam("desc") String desc,
+			@FormParam("docurl") String docurl,
+			@FormParam("debug") @DefaultValue("true") Boolean debug
 		) {
 		byte [] rawFile = null;
 		ApiResponse response = null;
+
+		User user = (User)sec.getUserPrincipal();
 
 		// TODO: Check user permissions
 		if(response == null) {
@@ -239,16 +242,14 @@ public class ScriptResource {
 		}
 
 		if(response == null) {
-
 			Script script = new Script();
 
-			// TODO: Set script owner
+			script.setOwner(user);
 			script.setName(name);
 			script.setDescription(desc);
 			script.setDocurl(docurl);
 
 			script.setDebug(debug);
-			script.setShared(shared);
 
 			entityManager.persist(script);
 

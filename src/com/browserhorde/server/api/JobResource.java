@@ -2,6 +2,7 @@ package com.browserhorde.server.api;
 
 import java.util.List;
 
+import javax.annotation.security.RolesAllowed;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.ws.rs.DELETE;
@@ -13,8 +14,10 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -27,12 +30,12 @@ import com.browserhorde.server.api.json.InvalidRequestResponse;
 import com.browserhorde.server.api.json.ResourceResponse;
 import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Script;
+import com.browserhorde.server.entity.User;
+import com.browserhorde.server.security.Roles;
 import com.browserhorde.server.util.Randomizer;
 import com.google.inject.Inject;
-import com.google.inject.servlet.RequestScoped;
 
 @Path("jobs")
-@RequestScoped
 @Produces(MediaType.APPLICATION_JSON)
 public class JobResource {
 	private final Logger log = Logger.getLogger(getClass());
@@ -41,14 +44,18 @@ public class JobResource {
 	@Inject Randomizer randomizer;
 
 	@GET
-	public Response listJobs() {
+	@RolesAllowed(Roles.REGISTERED)
+	public Response listJobs(@Context SecurityContext sec) {
 		ApiResponse response = null;
 
 		// TODO: This needs to filter jobs by the user that owns them
 		if(response == null) {
 			Query query = entityManager.createQuery(
 					"select * from " + Job.class.getName()
+					+ " where owner=:owner"
 				);
+			query.setParameter("owner", sec.getUserPrincipal());
+
 			List<?> results = query.getResultList();
 			response = new ResourceResponse(results);
 		}
@@ -79,7 +86,9 @@ public class JobResource {
 
 	// FIXME: For some reason we aren't picking up the form params
 	@POST
+	@RolesAllowed(Roles.REGISTERED)
 	public Response createJob(
+			@Context SecurityContext sec,
 			@FormParam("name") @DefaultValue("New Job") String name,
 			@FormParam("desc") String description,
 			@FormParam("website") String website,
@@ -92,8 +101,7 @@ public class JobResource {
 
 		ApiResponse response = null;
 
-		// TODO: If the user isn't logged in then request denied
-		// response = new RequestDeniedResponse()
+		User user = (User)sec.getUserPrincipal();
 
 		scriptId = StringUtils.trimToNull(scriptId);
 		if(scriptId == null) {
@@ -108,6 +116,7 @@ public class JobResource {
 				// TODO: Some input validation here would be nice
 				Job job = new Job();
 	
+				job.setOwner(user);
 				job.setRandomizer(randomizer.nextRandomizer());
 				job.setName(name);
 				job.setDescription(description);
@@ -129,6 +138,7 @@ public class JobResource {
 
 	@PUT
 	@Path("{id}")
+	@RolesAllowed(Roles.REGISTERED)
 	public ApiResponse updateJob(@PathParam("id") String id) {
 		// TODO: If the user isn't logged in then request denied
 		throw new NotImplementedException();
@@ -136,6 +146,7 @@ public class JobResource {
 
 	@DELETE
 	@Path("{id}")
+	@RolesAllowed(Roles.REGISTERED)
 	public Response deleteJob(@PathParam("id") String id) {
 		ApiResponse response = null;
 

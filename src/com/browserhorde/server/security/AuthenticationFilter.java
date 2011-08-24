@@ -13,6 +13,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
@@ -67,6 +68,7 @@ public class AuthenticationFilter extends HttpFilter {
 		if(user != null) {
 			req = new AuthenticatedRequestWrapper(req, user);
 		}
+		rsp = new AuthenticatedResponseWrapper(rsp);
 
 		chain.doFilter(req, rsp);
 	}
@@ -112,12 +114,53 @@ public class AuthenticationFilter extends HttpFilter {
 
 		@Override
 		public boolean isUserInRole(String role) {
-			// An unregistered user isn't in any roles
+			// TODO: This may be more suitable in a listener or something
+
+			// An anonymous user doesn't have any roles
 			if(user == null) {
 				return false;
 			}
+
+			// The most basic role is a registered user
+			if(Roles.REGISTERED.equals(role)) {
+				return true;
+			}
+
 			// TODO: Some user magic here so we can filter what users can do
 			return super.isUserInRole(role);
+		}
+	}
+
+	// TODO: This should do some filtering to convert certain responses to 404
+	private final class AuthenticatedResponseWrapper extends HttpServletResponseWrapper {
+		public AuthenticatedResponseWrapper(HttpServletResponse response) {
+			super(response);
+		}
+
+		@Override
+		public void setStatus(int sc) {
+			setStatus(sc, null);
+		}
+		@Override
+		public void setStatus(int sc, String sm) {
+			super.setStatus(transformStatus(sc), sm);
+		}
+
+		@Override
+		public void sendError(int sc) throws IOException {
+			sendError(sc, null);
+		}
+		@Override
+		public void sendError(int sc, String msg) throws IOException {
+			super.sendError(transformStatus(sc), msg);
+		}
+
+		// TODO: This should transform the message as well
+		private int transformStatus(int sc) {
+			if(sc == HttpServletResponse.SC_FORBIDDEN) {
+				sc = HttpServletResponse.SC_NOT_FOUND;
+			}
+			return sc;
 		}
 	}
 }

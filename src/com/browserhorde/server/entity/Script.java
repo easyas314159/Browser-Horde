@@ -14,7 +14,6 @@ public class Script extends BaseObject {
 	@Expose private String description;
 
 	@Expose private boolean debug;
-	@Expose private boolean shared;
 
 	@ManyToOne
 	public User getOwner() {
@@ -50,12 +49,5 @@ public class Script extends BaseObject {
 	}
 	public void setDebug(boolean debug) {
 		this.debug = debug;
-	}
-
-	public boolean isShared() {
-		return shared;
-	}
-	public void setShared(boolean shared) {
-		this.shared = shared;
 	}
 }
