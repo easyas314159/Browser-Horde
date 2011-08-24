@@ -27,6 +27,12 @@ public class ExecutorServiceProvider implements Provider<ExecutorService> {
 		int keep_alive_timeout = ParamUtils.asInteger(context.getInitParameter(ServletInitOptions.EXECUTOR_CORE_THREAD_TIMEOUT), 300);
 		boolean allow_core_thread_timeout = ParamUtils.asBoolean(context.getInitParameter(ServletInitOptions.EXECUTOR_ALLOW_CORE_THREAD_TIMEOUT), true);
 
+		if(max_pool_size < 1) {
+			max_pool_size = 1;
+		}
+		if(core_pool_size < 1) {
+			core_pool_size = 1;
+		}
 		if(max_pool_size < core_pool_size) {
 			core_pool_size = max_pool_size;
 			log.warn(String.format("%s may not be larger than %s", ServletInitOptions.EXECUTOR_CORE_POOL_SIZE, ServletInitOptions.EXECUTOR_MAX_POOL_SIZE));

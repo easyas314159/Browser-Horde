@@ -9,12 +9,13 @@ import java.io.Reader;
 import java.io.Writer;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.zip.GZIPOutputStream;
 
 import javax.annotation.security.RolesAllowed;
@@ -24,8 +25,6 @@ import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
@@ -37,6 +36,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
+import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.fileupload.FileItem;
@@ -45,7 +45,8 @@ import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.RequestContext;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.commons.fileupload.servlet.ServletRequestContext;
-import org.apache.commons.io.output.ByteArrayOutputStream;
+import org.apache.commons.io.input.TeeInputStream;
+import org.apache.commons.io.output.TeeOutputStream;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIUtils;
@@ -53,18 +54,20 @@ import org.apache.log4j.Logger;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AccessControlList;
-import com.amazonaws.services.s3.model.GroupGrantee;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.Permission;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.api.json.ApiResponse;
 import com.browserhorde.server.api.json.ApiResponseStatus;
 import com.browserhorde.server.api.json.InvalidRequestResponse;
 import com.browserhorde.server.api.json.ResourceResponse;
+import com.browserhorde.server.aws.AmazonS3AsyncPutObject;
 import com.browserhorde.server.entity.Script;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.security.Roles;
+import com.browserhorde.server.util.ConcurrentPipeStream;
+import com.browserhorde.server.util.ParamUtils;
 import com.google.inject.Inject;
 import com.yahoo.platform.yui.compressor.JavaScriptCompressor;
 
@@ -143,26 +146,48 @@ public class ScriptResource {
 
 		Map<String, Float> acceptedEncodings = new HashMap<String, Float>();
 		List<String> acceptHeaders = headers.getRequestHeader(HttpHeaders.ACCEPT_ENCODING);
-		for(String acceptHeader : acceptHeaders) {
-			acceptHeader = acceptHeader.trim();
-			String encodings[] = acceptHeader.split("\\s*,\\s*");
-			for(String encoding : encodings) {
-				String details[] = encoding.split("\\s*(;|=)\\s*", 3);
-				if(details.length == 1) {
-					acceptedEncodings.put(details[0], null);
-				}
-				else if(details.length == 3 && details[1].equals("q") && details[2].matches("(0(\\.\\d{1,3})?)|(1(\\.0{1,3})?)")) {
-					acceptedEncodings.put(details[0], Float.valueOf(details[2]));
-				}
-				else {
-					log.debug(String.format("Bad Accept-Encoding header \'%s\'", encoding));
+		if(acceptHeaders != null) {
+			for(String acceptHeader : acceptHeaders) {
+				acceptHeader = acceptHeader.trim();
+				String encodings[] = acceptHeader.split("\\s*,\\s*");
+				for(String encoding : encodings) {
+					String details[] = encoding.split("\\s*(;|=)\\s*", 3);
+					if(details.length == 1) {
+						acceptedEncodings.put(details[0], 1.0f);
+					}
+					else if(details.length == 3 && details[1].equals("q") && details[2].matches("(0(\\.\\d{1,3})?)|(1(\\.0{1,3})?)")) {
+						acceptedEncodings.put(details[0], Float.valueOf(details[2]));
+					}
+					else {
+						log.debug(String.format("Bad Accept-Encoding header \'%s\'", encoding));
+					}
 				}
 			}
 		}
 
-		// TODO: Figure out if we should be gzipping the response
-
 		boolean gzip = false;
+		Float weightGzip = acceptedEncodings.get("gzip");
+		Float weightIdent = acceptedEncodings.get("identity");
+		Float weightAny = acceptedEncodings.get("*");
+
+		if(weightIdent == null) {
+			weightIdent = 0.001f;
+		}
+
+		if(weightGzip == null) {
+			if(weightAny != null && weightIdent <= weightAny) {
+				gzip = true;
+			}
+		}
+		else {
+			if(weightIdent <= weightGzip) {
+				gzip = true;
+			}
+			else if(weightAny != null && weightIdent <= weightAny) {
+				gzip = true;
+			}
+		}
+
 		boolean mini = !script.isDebug();
 
 		String bucket = context.getInitParameter(ServletInitOptions.AWS_S3_BUCKET);
@@ -186,28 +211,25 @@ public class ScriptResource {
 	}
 
 	@POST
-	@Consumes({MediaType.MULTIPART_FORM_DATA})
-	//@RolesAllowed(Roles.REGISTERED)
+	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	public Response createScript(
 			@Context SecurityContext sec,
 			@Context HttpServletRequest request,
-			@FormParam("name") @DefaultValue("New Script") String name,
-			@FormParam("desc") String desc,
-			@FormParam("docurl") String docurl,
-			@FormParam("debug") @DefaultValue("true") Boolean debug
+			@Context UriInfo ui
 		) {
+
 		byte [] rawFile = null;
 		ApiResponse response = null;
 
 		User user = (User)sec.getUserPrincipal();
 
 		// TODO: Check user permissions
+		Map<String, String> params = new HashMap<String, String>();
 		if(response == null) {
 			RequestContext reqCtx = new ServletRequestContext(request);
 			ServletFileUpload upload = new ServletFileUpload(fileFactory);
 			if(ServletFileUpload.isMultipartContent(reqCtx)) {
 				try {
-					Map<String, String> params = new HashMap<String, String>();
 					List<FileItem> scripts = new Vector<FileItem>();
 					List<FileItem> items = upload.parseRequest(request);
 					for(FileItem item : items) {
@@ -241,6 +263,11 @@ public class ScriptResource {
 			}
 		}
 
+		String name = ParamUtils.asString(params.get("name"), "New Script");
+		String desc = ParamUtils.asString(params.get("desc"));
+		String docurl = ParamUtils.asString(params.get("docurl"));
+		Boolean debug = ParamUtils.asBoolean("debug", Boolean.FALSE);
+		
 		if(response == null) {
 			Script script = new Script();
 
@@ -301,68 +328,6 @@ public class ScriptResource {
 		return Response.ok(response).build();
 	}
 
-	private void storeScript(byte [] data, String bucket, String id) throws IOException {
-		String prefix = String.format("scripts/%s", id);
-
-		AccessControlList acl =  awsS3.getBucketAcl(bucket);
-		acl.grantPermission(GroupGrantee.AllUsers, Permission.Read);
-
-		final String keyOrig = String.format("%s/%s", prefix, FILE_ORIGINAL);
-		final String keyMini = String.format("%s/%s", prefix, FILE_MINIFIED);
-		final String keyComp = String.format("%s/%s", prefix, FILE_COMPRESSED);
-		final String keyCompMini = String.format("%s/%s", prefix, FILE_MINIFIED_COMPRESSED);
-
-		final ObjectMetadata metaRaw = new ObjectMetadata();
-		final ObjectMetadata metaComp = new ObjectMetadata();
-
-		Date lastModified = new Date();
-		String contentType = "application/javascript";
-
-		metaRaw.setContentType(contentType);
-		metaRaw.setLastModified(lastModified);
-
-		metaComp.setContentType(contentType);
-		metaComp.setContentEncoding("gzip");
-		metaComp.setLastModified(lastModified);
-
-		byte [] tempBuffer;
-		InputStream tempInput;
-
-		uploadData(data, bucket, keyOrig, metaRaw, acl);
-
-		final ByteArrayOutputStream dupGzipOrig = new ByteArrayOutputStream();
-		final GZIPOutputStream gzipOrig = new GZIPOutputStream(dupGzipOrig);
-
-		gzipOrig.write(data);
-		gzipOrig.close();
-
-		tempBuffer = dupGzipOrig.toByteArray();
-		uploadData(tempBuffer, bucket, keyComp, metaComp, acl);
-
-		tempInput = new ByteArrayInputStream(data);
-		final ByteArrayOutputStream dupMini = new ByteArrayOutputStream();
-
-		Reader tempReader = new InputStreamReader(tempInput);
-		Writer tempWriter = new OutputStreamWriter(dupMini);
-
-		JavaScriptCompressor compressor = new JavaScriptCompressor(tempReader, null);
-		compressor.compress(tempWriter, 16000, true, false, true, false);
-
-		tempReader.close();
-		tempWriter.close();
-
-		tempBuffer = dupMini.toByteArray();
-		uploadData(tempBuffer, bucket, keyMini, metaRaw, acl);
-
-		final ByteArrayOutputStream dupGzipMini = new ByteArrayOutputStream();
-		final GZIPOutputStream gzipMini = new GZIPOutputStream(dupGzipMini);
-
-		gzipMini.write(tempBuffer);
-		gzipMini.close();
-
-		uploadData(dupGzipMini.toByteArray(), bucket, keyCompMini, metaComp, acl);
-	}
-
 	private PutObjectResult uploadData(byte [] buffer, String bucket, String key, ObjectMetadata meta, AccessControlList acl) throws IOException {
 		meta.setContentLength(buffer.length);
 		ByteArrayInputStream input = new ByteArrayInputStream(buffer);
@@ -372,7 +337,10 @@ public class ScriptResource {
 		return result;
 	}
 	
-	/*
+	private void storeScript(byte [] source, String bucket, String id) throws IOException {
+		storeScript(new ByteArrayInputStream(source), bucket, id);
+	}
+
 	private void storeScript(InputStream source, String bucket, String id) throws IOException {
 		String prefix = String.format("scripts/%s", id);
 
@@ -382,10 +350,10 @@ public class ScriptResource {
 		final String keyCompMini = String.format("%s/%s", prefix, FILE_MINIFIED_COMPRESSED);
 
 		// Do some crazy input stream branching
-		final PipeStream pipeOrig = new PipeStream();
-		final PipeStream pipeComp = new PipeStream();
-		final PipeStream pipeMini = new PipeStream();
-		final PipeStream pipeCompMini = new PipeStream();
+		final ConcurrentPipeStream pipeOrig = new ConcurrentPipeStream();
+		final ConcurrentPipeStream pipeComp = new ConcurrentPipeStream();
+		final ConcurrentPipeStream pipeMini = new ConcurrentPipeStream();
+		final ConcurrentPipeStream pipeCompMini = new ConcurrentPipeStream();
 
 		final GZIPOutputStream gzipOrig = new GZIPOutputStream(pipeComp.getOutputStream());
 		final GZIPOutputStream gzipMini = new GZIPOutputStream(pipeCompMini.getOutputStream());
@@ -402,7 +370,6 @@ public class ScriptResource {
 		metaComp.setContentEncoding("gzip");
 
 		// Perform crazy async file upload
-		// FIXME: This locks up if there are less than 3 executors in the thread pool
 		Future<PutObjectResult> fOrig = executorService.submit(new AmazonS3AsyncPutObject(
 				awsS3, new PutObjectRequest(bucket, keyOrig, teeOrig, metaRaw)
 			));
@@ -430,5 +397,4 @@ public class ScriptResource {
 				awsS3, new PutObjectRequest(bucket, keyCompMini, pipeCompMini.getInputStream(), metaComp)
 			));
 	}
-	 */
 }
