@@ -15,13 +15,19 @@ import org.apache.log4j.Logger;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.services.elasticache.AmazonElastiCache;
+import com.amazonaws.services.elasticache.AmazonElastiCacheAsync;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.simpledb.AmazonSimpleDB;
+import com.amazonaws.services.simpledb.AmazonSimpleDBAsync;
 import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
 import com.amazonaws.services.sns.AmazonSNS;
 import com.browserhorde.server.inject.AmazonCredentialsProvider;
+import com.browserhorde.server.inject.AmazonElastiCacheAsyncProvider;
+import com.browserhorde.server.inject.AmazonElastiCacheProvider;
 import com.browserhorde.server.inject.AmazonS3Provider;
 import com.browserhorde.server.inject.AmazonSNSProvider;
+import com.browserhorde.server.inject.AmazonSimpleDBAsyncProvider;
 import com.browserhorde.server.inject.AmazonSimpleDBProvider;
 import com.browserhorde.server.inject.AmazonSimpleEmailServiceProvider;
 import com.browserhorde.server.inject.ClientConfigurationProvider;
@@ -69,11 +75,20 @@ public class DependencyInjection extends GuiceServletContextListener {
 							bind(ClientConfiguration.class)
 								.toProvider(ClientConfigurationProvider.class)
 								.in(Singleton.class);
+							bind(AmazonElastiCache.class)
+								.toProvider(AmazonElastiCacheProvider.class)
+								.in(Singleton.class);
+							bind(AmazonElastiCacheAsync.class)
+								.toProvider(AmazonElastiCacheAsyncProvider.class)
+								.in(Singleton.class);
 							bind(AmazonS3.class)
 								.toProvider(AmazonS3Provider.class)
 								.in(Singleton.class);
 							bind(AmazonSimpleDB.class)
 								.toProvider(AmazonSimpleDBProvider.class)
+								.in(Singleton.class);
+							bind(AmazonSimpleDBAsync.class)
+								.toProvider(AmazonSimpleDBAsyncProvider.class)
 								.in(Singleton.class);
 							bind(AmazonSimpleEmailService.class)
 								.toProvider(AmazonSimpleEmailServiceProvider.class)
@@ -109,7 +124,9 @@ public class DependencyInjection extends GuiceServletContextListener {
 			                		RolesAllowedResourceFilterFactory.class.getName()
 			                	);
 
+			                filter("/*").through(XRateLimitFilter.class);
 			                filter("/*").through(AuthenticationFilter.class);
+			                filter("/workorders/*").through(XMachineIdFilter.class);
 
 							serve("/*")
 								.with(GuiceContainer.class, params)

@@ -11,6 +11,7 @@ public final class ServletInitOptions {
 
 	// Memcached
 	public static final String MEMCACHED_CLUSTER = "memcached.cluster";
+	public static final String MEMCACHED_CLUSTER_ID = "memcached.cluster_id";
 	public static final String MEMCACHED_CONNECTION_FACTORY = "memcached.connection_factory";
 
 	// Amazon Web Services - General

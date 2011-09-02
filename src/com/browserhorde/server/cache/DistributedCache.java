@@ -22,6 +22,10 @@ public class DistributedCache<Value> extends Cache<String, Value> {
 		this(memcached, transcoder, null);
 	}
 	public DistributedCache(MemcachedClient memcached, Transcoder<Value> transcoder, String namespace) {
+		if(memcached == null) {
+			throw new NullPointerException();
+		}
+
 		this.memcached = memcached;
 		this.transcoder = transcoder;
 		if(namespace == null) {
@@ -35,7 +39,7 @@ public class DistributedCache<Value> extends Cache<String, Value> {
 		Value result = null;
 		Future<Value> f = memcached.asyncGet(namespaceifyKey(key), transcoder);
 		try {
-			result = f.get(1, TimeUnit.SECONDS);
+			result = f.get(500, TimeUnit.MILLISECONDS);
 		}
 		catch(Exception ex) {
 			f.cancel(false);

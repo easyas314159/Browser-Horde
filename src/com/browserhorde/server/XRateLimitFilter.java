@@ -8,32 +8,31 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.Logger;
+import net.spy.memcached.MemcachedClient;
 
-/**
- * Handles cross-origin resource sharing as per http://www.w3.org/TR/cors/
- * 
- * @author kloney
- *
- */
-public class AccessControlFilter extends HttpFilter {
-	private final Logger log = Logger.getLogger(getClass());
+import com.browserhorde.server.api.ApiHttpHeaders;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+
+@Singleton
+public class XRateLimitFilter extends HttpFilter {
+	@Inject private MemcachedClient memcached;
 
 	@Override
 	public void init(FilterConfig arg0) throws ServletException {
 	}
-
 	@Override
 	public void destroy() {
 	}
 
 	@Override
 	public void doFilter(HttpServletRequest req, HttpServletResponse rsp, FilterChain chain) throws IOException, ServletException {
-		String origin = req.getHeader("Origin");
-		if(origin != null) {
-			rsp.setHeader("Access-Control-Allow-Origin", "*");
-			rsp.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
-		}
+		// TODO: Add rate limiting headers
+
+		rsp.addIntHeader(ApiHttpHeaders.X_RATE_LIMIT, 0);
+		rsp.addIntHeader(ApiHttpHeaders.X_RATE_LIMIT_REMAINING, 0);
+		rsp.addDateHeader(ApiHttpHeaders.X_RATE_LIMIT_RESET, Long.MAX_VALUE);
+
 		chain.doFilter(req, rsp);
-	}	
+	}
 }

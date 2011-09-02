@@ -76,4 +76,14 @@ public final class ParamUtils {
 		catch(Throwable t) {}
 		return result;
 	}
+
+	public static <T> T coalesce(T ... ts) {
+		for(T t : ts) {
+			if(t == null) {
+				continue;
+			}
+			return t;
+		}
+		return null;
+	}
 }

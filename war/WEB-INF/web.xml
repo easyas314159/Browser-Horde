@@ -25,6 +25,10 @@
     <param-name>aws.ses.sender</param-name>
     <param-value>no-reply@brainsinjars.com</param-value>
   </context-param>
+  <context-param>
+    <param-name>memcached.cluster</param-name>
+    <param-value>localhost:11211</param-value>
+  </context-param>
   <listener>
     <listener-class>com.browserhorde.server.Configurator</listener-class>
   </listener>
@@ -34,7 +38,6 @@
   <listener>
     <listener-class>com.browserhorde.server.DependencyInjection</listener-class>
   </listener>
-
   <filter>
     <display-name>ErrorTrap</display-name>
     <filter-name>ErrorTrap</filter-name>
@@ -44,21 +47,9 @@
     <filter-name>ErrorTrap</filter-name>
     <url-pattern>/*</url-pattern>
   </filter-mapping>
-
-  <filter>
-    <display-name>AccessControlFilter</display-name>
-    <filter-name>AccessControlFilter</filter-name>
-    <filter-class>com.browserhorde.server.AccessControlFilter</filter-class>
-  </filter>
-  <filter-mapping>
-    <filter-name>AccessControlFilter</filter-name>
-    <url-pattern>/*</url-pattern>
-  </filter-mapping>
-
   <filter>
     <display-name>GuiceFilter</display-name>
     <filter-name>GuiceFilter</filter-name>
-    <!-- <filter-class>com.google.inject.servlet.GuiceFilter</filter-class>-->
     <filter-class>com.browserhorde.server.IntermediateGuiceFilter</filter-class>
   </filter>
   <filter-mapping>
@@ -70,7 +61,6 @@
     <url-pattern>/users/*</url-pattern>
     <url-pattern>/workorders/*</url-pattern>
   </filter-mapping>
-
   <welcome-file-list>
     <welcome-file>index.html</welcome-file>
   </welcome-file-list>
