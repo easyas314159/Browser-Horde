@@ -2,19 +2,29 @@ package com.browserhorde.server.entity;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
+import javax.xml.bind.annotation.XmlElement;
 
 import com.google.gson.annotations.Expose;
 
 @Entity
 public class Task extends BaseObject {
-	@Expose public Job job;
+	@Expose
+	@XmlElement
+	public Job job;
 
 	public String randomizer;
 
-	@Expose private boolean ispublic;
-	@Expose private boolean active;
+	@Expose
+	@XmlElement
+	private boolean ispublic;
 
-	@Expose private Integer timeout;
+	@Expose
+	@XmlElement
+	private boolean active;
+
+	@Expose
+	@XmlElement
+	private Integer timeout;
 
 	// TODO: Were do we keep the data?
 

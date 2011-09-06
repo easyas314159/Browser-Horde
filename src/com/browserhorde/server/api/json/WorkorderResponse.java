@@ -2,20 +2,37 @@ package com.browserhorde.server.api.json;
 
 import java.util.Date;
 
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlID;
+import javax.xml.bind.annotation.XmlRootElement;
+
 import com.browserhorde.server.entity.Task;
 import com.google.gson.JsonElement;
 import com.google.gson.annotations.Expose;
 
-public class WorkorderResponse extends ApiResponse {
-	@Expose private final String id;
-	@Expose private final Date expires;
-	@Expose private final Task task;
+@XmlRootElement(name="workorder")
+public class WorkorderResponse implements ApiResponse {
+	@Expose
+	@XmlID
+	@XmlAttribute
+	private String id;
 
-	@Expose private final JsonElement data;
+	@Expose
+	@XmlElement
+	private Date expires;
 
+	@Expose
+	@XmlElement
+	private Task task;
+
+	@Expose
+	@XmlElement
+	private JsonElement data;
+
+	public WorkorderResponse() {
+	}
 	public WorkorderResponse(String id, Date expires, Task task, JsonElement data) {
-		super(ApiResponseStatus.OK);
-
 		this.id = id;
 		this.expires = expires;
 		this.task = task;

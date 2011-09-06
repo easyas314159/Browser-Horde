@@ -10,7 +10,7 @@ import javax.ws.rs.core.Response;
 import com.browserhorde.server.security.Roles;
 
 @Path("results")
-@Produces(MediaType.APPLICATION_JSON)
+@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 public class ResultResource {
 	@GET
 	@RolesAllowed(Roles.REGISTERED)

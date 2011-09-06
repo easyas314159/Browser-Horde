@@ -58,9 +58,8 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.browserhorde.server.ServletInitOptions;
+import com.browserhorde.server.api.exception.InvalidRequestException;
 import com.browserhorde.server.api.json.ApiResponse;
-import com.browserhorde.server.api.json.ApiResponseStatus;
-import com.browserhorde.server.api.json.InvalidRequestResponse;
 import com.browserhorde.server.api.json.ResourceResponse;
 import com.browserhorde.server.aws.AmazonS3AsyncPutObject;
 import com.browserhorde.server.entity.Script;
@@ -72,7 +71,7 @@ import com.google.inject.Inject;
 import com.yahoo.platform.yui.compressor.JavaScriptCompressor;
 
 @Path("scripts")
-@Produces(MediaType.APPLICATION_JSON)
+@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 public class ScriptResource {
 	private static final String BASE_PATH = "scripts";
 
@@ -117,7 +116,7 @@ public class ScriptResource {
 		if(response == null) {
 			id = StringUtils.trimToNull(id);
 			if(id == null) {
-				response = new InvalidRequestResponse();
+				throw new InvalidRequestException();
 			}
 			else {
 				Script script = entityManager.find(Script.class, id);
@@ -250,12 +249,11 @@ public class ScriptResource {
 						rawFile = script.get();
 					}
 					else {
-						response = new InvalidRequestResponse();
+						throw new InvalidRequestException();
 					}
 				}
 				catch(FileUploadException ex) {
-					response = new InvalidRequestResponse();
-					log.info("", ex);
+					throw new InvalidRequestException();
 				}
 			}
 			else {
@@ -295,7 +293,7 @@ public class ScriptResource {
 			response = new ResourceResponse(script);
 		}
 		else {
-			response = new InvalidRequestResponse();
+			throw new InvalidRequestException();
 		}
 
 		return Response.ok(response).build();
@@ -317,11 +315,11 @@ public class ScriptResource {
 		if(response == null) {
 			Script script = entityManager.find(Script.class, id);
 			if(script == null) {
-				response = new InvalidRequestResponse();
+				throw new InvalidRequestException();
 			}
 			else {
 				entityManager.remove(script);
-				response = new ApiResponse(ApiResponseStatus.OK);
+				throw new InvalidRequestException();
 			}
 		}
 

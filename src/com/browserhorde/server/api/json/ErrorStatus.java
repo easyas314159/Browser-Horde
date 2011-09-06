@@ -1,6 +1,6 @@
 package com.browserhorde.server.api.json;
 
-public enum ApiRequestStatus {
-	
+public enum ErrorStatus {
+	UNKNOWN
 	;
 }

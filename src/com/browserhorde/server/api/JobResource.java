@@ -22,11 +22,9 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
 
+import com.browserhorde.server.api.exception.InvalidRequestException;
 import com.browserhorde.server.api.json.ApiResponse;
-import com.browserhorde.server.api.json.ApiResponseStatus;
-import com.browserhorde.server.api.json.InvalidRequestResponse;
 import com.browserhorde.server.api.json.ResourceResponse;
 import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Script;
@@ -36,10 +34,8 @@ import com.browserhorde.server.util.Randomizer;
 import com.google.inject.Inject;
 
 @Path("jobs")
-@Produces(MediaType.APPLICATION_JSON)
+@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 public class JobResource {
-	private final Logger log = Logger.getLogger(getClass());
-
 	@Inject EntityManager entityManager;
 	@Inject Randomizer randomizer;
 
@@ -70,7 +66,7 @@ public class JobResource {
 		if(response == null) {
 			id = StringUtils.trimToNull(id);
 			if(id == null) {
-				response = new InvalidRequestResponse();
+				throw new InvalidRequestException();
 			}
 			else {
 				Job job = entityManager.find(Job.class, id);
@@ -105,12 +101,12 @@ public class JobResource {
 
 		scriptId = StringUtils.trimToNull(scriptId);
 		if(scriptId == null) {
-			response = new InvalidRequestResponse();
+			throw new InvalidRequestException();
 		}
 		else {
 			Script script = entityManager.find(Script.class, scriptId);
 			if(script == null) {
-				response = new InvalidRequestResponse();
+				throw new InvalidRequestException();
 			}
 			else {
 				// TODO: Some input validation here would be nice
@@ -123,7 +119,7 @@ public class JobResource {
 				job.setWebsite(website);
 				job.setCallback(callback);
 				job.setIspublic(ispublic);
-				job.setIsactive(isactive);
+				job.setActive(isactive);
 				job.setTimeout(timeout);
 				job.setScript(script);
 	
@@ -154,11 +150,11 @@ public class JobResource {
 		if(response == null) {
 			Job job = entityManager.find(Job.class, id);
 			if(job == null) {
-				response = new InvalidRequestResponse();
+				throw new InvalidRequestException();
 			}
 			else {
 				entityManager.remove(job);
-				response = new ApiResponse(ApiResponseStatus.OK);
+				//response = new ApiResponse(ApiResponseStatus.OK);
 			}
 		}
 

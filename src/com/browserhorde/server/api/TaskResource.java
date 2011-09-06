@@ -21,11 +21,9 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
 
+import com.browserhorde.server.api.exception.InvalidRequestException;
 import com.browserhorde.server.api.json.ApiResponse;
-import com.browserhorde.server.api.json.ApiResponseStatus;
-import com.browserhorde.server.api.json.InvalidRequestResponse;
 import com.browserhorde.server.api.json.ResourceResponse;
 import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Task;
@@ -34,10 +32,8 @@ import com.browserhorde.server.util.Randomizer;
 import com.google.inject.Inject;
 
 @Path("tasks")
-@Produces(MediaType.APPLICATION_JSON)
+@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 public class TaskResource {
-	private final Logger log = Logger.getLogger(getClass());
-
 	@Inject EntityManager entityManager;
 	@Inject Randomizer randomizer;
 
@@ -50,12 +46,12 @@ public class TaskResource {
 
 		jobId = StringUtils.trimToNull(jobId);
 		if(jobId == null) {
-			response = new InvalidRequestResponse();
+			throw new InvalidRequestException();
 		}
 		else {
 			job = entityManager.find(Job.class, jobId);
 			if(job == null) {
-				response = new InvalidRequestResponse();
+				throw new InvalidRequestException();
 			}
 		}
 
@@ -83,7 +79,7 @@ public class TaskResource {
 		jobId = StringUtils.trimToNull(jobId);
 		taskId = StringUtils.trimToNull(taskId);
 		if(jobId == null || taskId == null) {
-			response = new InvalidRequestResponse();
+			throw new InvalidRequestException();
 		}
 
 		if(response == null) {
@@ -110,7 +106,7 @@ public class TaskResource {
 
 		Job job = entityManager.find(Job.class, jobId);
 		if(job == null) {
-			response = new InvalidRequestResponse();
+			throw new InvalidRequestException();
 		}
 		else {
 			Task task = new Task();
@@ -153,11 +149,11 @@ public class TaskResource {
 		if(response == null) {
 			Task task = entityManager.find(Task.class, id);
 			if(task == null) {
-				response = new InvalidRequestResponse();
+				throw new InvalidRequestException();
 			}
 			else {
 				entityManager.remove(task);
-				response = new ApiResponse(ApiResponseStatus.OK);
+				//response = new ApiResponse(ApiResponseStatus.OK);
 			}
 		}
 

@@ -8,6 +8,11 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlID;
 
 import com.google.gson.annotations.Expose;
 import com.spaceprogram.simplejpa.model.Ided;
@@ -16,11 +21,20 @@ import com.spaceprogram.simplejpa.model.Timestamped;
 
 @MappedSuperclass
 @EntityListeners({TimestampEntityListener.class})
+@XmlAccessorType(XmlAccessType.NONE)
 public abstract class BaseObject implements Ided, Timestamped, Serializable {
-	@Expose private String id;
+	@Expose
+	@XmlID
+	@XmlAttribute
+	private String id;
 
-	@Expose private Date created;
-	@Expose private Date updated;
+	@Expose
+	@XmlElement
+	private Date created;
+
+	@Expose
+	@XmlElement
+	private Date updated;
 
 	@Id
 	@GeneratedValue(strategy=GenerationType.AUTO)

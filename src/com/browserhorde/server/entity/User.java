@@ -4,17 +4,26 @@ import java.security.Principal;
 
 import javax.persistence.Entity;
 import javax.persistence.Transient;
+import javax.xml.bind.annotation.XmlElement;
 
 import com.browserhorde.server.security.BCrypt;
 import com.google.gson.annotations.Expose;
 
 @Entity
 public class User extends BaseObject implements Principal {
-	@Expose private String email;
+	@Expose
+	@XmlElement
+	private String email;
+
 	private String hash;
 
-	@Expose private String consumerKey;
-	@Expose private String consumerSecret;
+	@Expose
+	@XmlElement(name="consumer-key")
+	private String consumerKey;
+
+	@Expose
+	@XmlElement(name="consumer-secret")
+	private String consumerSecret;
 
 	@Override
 	@Transient

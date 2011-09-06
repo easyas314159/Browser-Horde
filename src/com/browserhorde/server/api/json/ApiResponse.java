@@ -1,16 +1,7 @@
 package com.browserhorde.server.api.json;
 
-import com.google.gson.annotations.Expose;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 
-
-public class ApiResponse {
-	@Expose private final ApiResponseStatus status;
-
-	public ApiResponse(ApiResponseStatus status) {
-		this.status = status;
-	}
-
-	public ApiResponseStatus getStatus() {
-		return status;
-	}
-}
+@XmlAccessorType(XmlAccessType.NONE)
+public interface ApiResponse {}

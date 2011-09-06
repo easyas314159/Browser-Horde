@@ -1,20 +1,31 @@
 package com.browserhorde.server.api.json;
 
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+
 import com.google.gson.annotations.Expose;
 
+@XmlRootElement(name="error")
+public class ErrorResponse implements ApiResponse {
+	@Expose
+	@XmlElement
+	private ErrorStatus status;
 
-public class ErrorResponse extends ApiResponse {
-	@Expose private final String message;
+	@Expose
+	@XmlElement
+	private String message;
 
-	public ErrorResponse(ApiResponseStatus status) {
+	public ErrorResponse() {
+		this(ErrorStatus.UNKNOWN, null);
+	}
+	public ErrorResponse(ErrorStatus status) {
 		this(status, null);
 	}
-	public ErrorResponse(ApiResponseStatus status, String message) {
-		super(status);
-		this.message = message;
+	public ErrorResponse(String message) {
+		this(null, message);
 	}
-
-	public String getMessage() {
-		return message;
+	public ErrorResponse(ErrorStatus status, String message) {
+		this.status = status;
+		this.message = message;
 	}
 }

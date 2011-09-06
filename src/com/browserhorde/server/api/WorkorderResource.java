@@ -1,5 +1,6 @@
 package com.browserhorde.server.api;
 
+import java.security.Principal;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -11,12 +12,12 @@ import javax.persistence.NoResultException;
 import javax.persistence.Query;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
@@ -28,8 +29,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 
 import com.browserhorde.server.api.json.ApiResponse;
-import com.browserhorde.server.api.json.ApiResponseStatus;
-import com.browserhorde.server.api.json.NoTasksResponse;
+import com.browserhorde.server.api.json.ErrorResponse;
 import com.browserhorde.server.api.json.WorkorderResponse;
 import com.browserhorde.server.cache.Cache;
 import com.browserhorde.server.cache.DistributedCache;
@@ -42,7 +42,7 @@ import com.browserhorde.server.util.Randomizer;
 import com.google.inject.Inject;
 
 @Path("workorders")
-@Produces(MediaType.APPLICATION_JSON)
+@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
 public class WorkorderResource {
 	@Inject private Randomizer randomizer;
 
@@ -65,13 +65,20 @@ public class WorkorderResource {
 	}
 
 	@GET
-	public Response checkoutWorkorder(@Context SecurityContext sec, @Context HttpHeaders headers) {
-		return checkoutWorkorderForJob(sec, headers, null);
+	public Response checkoutWorkorder(
+			@Context SecurityContext sec,
+			@HeaderParam(ApiHttpHeaders.X_HORDE_MACHINE_ID) String machineId
+		) {
+		return checkoutWorkorderForJob(sec, machineId, null);
 	}
 
 	@GET
 	@Path("{id}")
-	public Response checkoutWorkorderForJob(@Context SecurityContext sec, @Context HttpHeaders headers, @PathParam("id") String id) {
+	public Response checkoutWorkorderForJob(
+			@Context SecurityContext sec,
+			@HeaderParam(ApiHttpHeaders.X_HORDE_MACHINE_ID) String machineId,
+			@PathParam("id") String id
+		) {
 		// Play some tricks with the modified header to try and track the user
 
 		ApiResponse response = null;
@@ -85,7 +92,7 @@ public class WorkorderResource {
 		Task task = randomTask(job);
 
 		if(task == null) {
-			response = new NoTasksResponse();
+			response = new ErrorResponse();
 		}
 		else {
 			String wo = UUID.randomUUID().toString();
@@ -93,11 +100,11 @@ public class WorkorderResource {
 
 			Calendar c = Calendar.getInstance();
 			c.add(Calendar.SECOND, timeout);
-			
+
 			Date expires = c.getTime();
 
 			response = new WorkorderResponse(wo, expires, task, null);
-			WorkorderEntry entry = new WorkorderEntry(user == null ? null : user.getName(), task.getId());
+			WorkorderEntry entry = new WorkorderEntry(user == null ? null : user.getName(), machineId, task.getId());
 
 			allWorkorders.put(wo, entry, expires);
 		}
@@ -111,9 +118,10 @@ public class WorkorderResource {
 	}
 
 	@POST
-	@Path("{id}")
+	@Path("{id}/{task}")
 	public Response checkinWorkorder(
 			@Context SecurityContext sec,
+			@HeaderParam(ApiHttpHeaders.X_HORDE_MACHINE_ID) String machineId,
 			@PathParam("id") String id
 		) {
 
@@ -122,7 +130,16 @@ public class WorkorderResource {
 			// TODO: return not found or something
 		}
 		else {
-			
+			Principal p = sec.getUserPrincipal();
+			String userId = (p == null) ? null : p.getName();
+
+			if(entry.userId == userId || (userId != null && userId.equals(entry.userId))
+				&& entry.machineId == machineId || (machineId != null && machineId.equals(entry.machineId))) {
+				// All the parameters check out so this is probably the correct result
+			}
+			else {
+				// TODO: return failed or something
+			}
 		}
 
 		throw new NotImplementedException();
@@ -130,15 +147,21 @@ public class WorkorderResource {
 
 	@DELETE
 	@Path("{id}")
-	public Response cancelWorkorder(@Context SecurityContext sec, @PathParam("id") String id) {
+	public Response cancelWorkorder(
+			@Context SecurityContext sec,
+			@HeaderParam(ApiHttpHeaders.X_HORDE_MACHINE_ID) String machineId,
+			@PathParam("id") String id
+		) {
 		User user = (User)sec.getUserPrincipal();
 		WorkorderEntry entry = allWorkorders.get(id);
 
-		if(entry != null && user != null && user.getName().equals(entry.user)) {
+		if(entry != null && user != null && user.getName().equals(entry.userId)) {
 			allWorkorders.expire(id);
 		}
 
-		return Response.ok(new ApiResponse(ApiResponseStatus.OK)).build();
+		ApiResponse response = null;
+		//ApiResponse response = new ApiResponse(ApiResponseStatus.OK);
+		return Response.ok(response).build();
 	}
 
 	private Job randomJob() {
@@ -232,12 +255,14 @@ public class WorkorderResource {
 	}
 
 	private static class WorkorderEntry {
-		public String user;
-		public String task;
+		public String userId;
+		public String machineId;
+		public String taskId;
 
-		public WorkorderEntry(String user, String task) {
-			this.user = user;
-			this.task = task;
+		public WorkorderEntry(String userId, String machineId, String taskId) {
+			this.userId = userId;
+			this.machineId = machineId;
+			this.taskId = taskId;
 		}
 	}
 }

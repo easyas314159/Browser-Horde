@@ -2,6 +2,8 @@ package com.browserhorde.server.entity;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 
 import com.google.gson.annotations.Expose;
 

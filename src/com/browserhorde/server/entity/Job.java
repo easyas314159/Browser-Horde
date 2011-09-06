@@ -2,25 +2,47 @@ package com.browserhorde.server.entity;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
+import javax.xml.bind.annotation.XmlElement;
 
 import com.google.gson.annotations.Expose;
 
 @Entity
 public class Job extends BaseObject {
-	@Expose private User owner;
+	@Expose
+	@XmlElement
+	private User owner;
 
-	@Expose private String name;
-	@Expose private String description;
+	@Expose
+	@XmlElement
+	private String name;
 
-	@Expose private String website;
-	@Expose private String callback;
+	@Expose
+	@XmlElement
+	private String description;
 
-	@Expose private boolean ispublic;
-	@Expose private boolean isactive;
+	@Expose
+	@XmlElement
+	private String website;
 
-	@Expose private Integer timeout;
+	@Expose
+	@XmlElement
+	private String callback;
 
-	@Expose private Script script;
+	@Expose
+	@XmlElement
+	private boolean ispublic;
+
+	@Expose
+	@XmlElement
+	private boolean active;
+
+	@Expose
+	@XmlElement
+	private Integer timeout;
+
+	@Expose
+	@XmlElement
+	private Script script;
 
 	private String randomizer;
 
@@ -74,11 +96,11 @@ public class Job extends BaseObject {
 		this.ispublic = ispublic;
 	}
 
-	public boolean isIsactive() {
-		return isactive;
+	public boolean isActive() {
+		return active;
 	}
-	public void setIsactive(boolean isactive) {
-		this.isactive = isactive;
+	public void setActive(boolean active) {
+		this.active = active;
 	}
 
 	public Integer getTimeout() {
