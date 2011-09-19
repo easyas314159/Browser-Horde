@@ -7,6 +7,7 @@ import javax.persistence.spi.PersistenceProvider;
 import javax.persistence.spi.PersistenceUnitInfo;
 
 
+@SuppressWarnings("unchecked")
 public class SimpleDBPersistenceProvider implements PersistenceProvider {
 	@Override
 	public EntityManagerFactory createContainerEntityManagerFactory(PersistenceUnitInfo info, Map map) {

@@ -11,15 +11,16 @@ import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 
-public class DateSerializer implements JsonSerializer<Date>, JsonDeserializer<Date> {
+public class DateHandler implements JsonSerializer<Date>, JsonDeserializer<Date> {
 	@Override
 	public JsonElement serialize(Date o, Type type, JsonSerializationContext ctx) {
-		return new JsonPrimitive(o.getTime() / 1000);
+		return new JsonPrimitive(o.getTime());
 	}
 
 	@Override
 	public Date deserialize(JsonElement el, Type type, JsonDeserializationContext ctx) throws JsonParseException {
-		return new Date(el.getAsLong());
+		Long t = el.getAsLong();
+		return t == null ? null : new Date(t);
 	}
 
 }

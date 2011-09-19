@@ -1,4 +1,4 @@
-package com.browserhorde.server.api;
+package com.browserhorde.server.api.writers;
 
 import java.io.IOException;
 import java.io.OutputStream;

@@ -4,7 +4,8 @@ import java.security.Principal;
 
 import javax.persistence.Entity;
 import javax.persistence.Transient;
-import javax.xml.bind.annotation.XmlElement;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.browserhorde.server.security.BCrypt;
 import com.google.gson.annotations.Expose;
@@ -12,17 +13,14 @@ import com.google.gson.annotations.Expose;
 @Entity
 public class User extends BaseObject implements Principal {
 	@Expose
-	@XmlElement
 	private String email;
 
 	private String hash;
 
 	@Expose
-	@XmlElement(name="consumer-key")
 	private String consumerKey;
 
 	@Expose
-	@XmlElement(name="consumer-secret")
 	private String consumerSecret;
 
 	@Override
@@ -72,5 +70,10 @@ public class User extends BaseObject implements Principal {
 	}
 	public void setConsumerSecret(String consumerSecret) {
 		this.consumerSecret = consumerSecret;
+	}
+	
+	@Override
+	public boolean isOwnedBy(User user) {
+		return StringUtils.equals(user.getId(), getId());
 	}
 }

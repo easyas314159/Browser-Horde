@@ -1,0 +1,35 @@
+<html>
+	<body>
+		<form action="javascript:flops();">
+			<input type="submit" value="Estimate FLOPS">
+		</form>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+		<script type="text/javascript" src="flops.js"></script>
+		<script type="text/javascript">
+			$(function() {
+				
+			});
+
+			function flops() {
+				var elapsed = (new Date()).getTime();
+				var flops = estimate_flops();
+				elapsed = (new Date()).getTime() - elapsed;
+
+				console.log(flops);
+				console.log(elapsed);
+
+				var mat = "[";
+				$.each(flops.modules, function(key, value) {
+					mat = mat + value.FADD + " "
+						+ value.FSUB + " "
+						+ value.FMUL + " "
+						+ value.FDIV + " "
+						+ value.elapsed + ";"
+						;
+				});
+				mat = mat + "]";
+				console.log(mat);
+			}
+		</script>
+	</body>
+</html>

@@ -2,28 +2,20 @@ package com.browserhorde.server.entity;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
-import javax.xml.bind.annotation.XmlElement;
 
 import com.google.gson.annotations.Expose;
 
 @Entity
 public class Task extends BaseObject {
 	@Expose
-	@XmlElement
 	public Job job;
 
 	public String randomizer;
 
 	@Expose
-	@XmlElement
-	private boolean ispublic;
-
-	@Expose
-	@XmlElement
 	private boolean active;
 
 	@Expose
-	@XmlElement
 	private Integer timeout;
 
 	// TODO: Were do we keep the data?
@@ -43,13 +35,6 @@ public class Task extends BaseObject {
 		this.randomizer = randomizer;
 	}
 
-	public boolean isIspublic() {
-		return ispublic;
-	}
-	public void setIspublic(boolean ispublic) {
-		this.ispublic = ispublic;
-	}
-
 	public boolean isActive() {
 		return active;
 	}
@@ -62,5 +47,10 @@ public class Task extends BaseObject {
 	}
 	public void setTimeout(Integer timeout) {
 		this.timeout = timeout;
+	}
+
+	@Override
+	public boolean isOwnedBy(User user) {
+		return job.isOwnedBy(user);
 	}
 }

@@ -1,47 +1,38 @@
 package com.browserhorde.server.entity;
 
+import java.net.URL;
+
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
-import javax.xml.bind.annotation.XmlElement;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.google.gson.annotations.Expose;
 
 @Entity
 public class Job extends BaseObject {
 	@Expose
-	@XmlElement
 	private User owner;
 
 	@Expose
-	@XmlElement
 	private String name;
 
 	@Expose
-	@XmlElement
 	private String description;
 
 	@Expose
-	@XmlElement
 	private String website;
 
 	@Expose
-	@XmlElement
 	private String callback;
 
 	@Expose
-	@XmlElement
-	private boolean ispublic;
-
-	@Expose
-	@XmlElement
 	private boolean active;
 
 	@Expose
-	@XmlElement
 	private Integer timeout;
 
 	@Expose
-	@XmlElement
 	private Script script;
 
 	private String randomizer;
@@ -78,6 +69,14 @@ public class Job extends BaseObject {
 	public String getWebsite() {
 		return website;
 	}
+	public void setWebsite(URL website) {
+		if(website == null) {
+			setWebsite((String)null);
+		}
+		else {
+			setWebsite(website.toString());
+		}
+	}
 	public void setWebsite(String website) {
 		this.website = website;
 	}
@@ -85,15 +84,16 @@ public class Job extends BaseObject {
 	public String getCallback() {
 		return callback;
 	}
+	public void setCallback(URL callback) {
+		if(callback == null) {
+			setCallback((String)null);
+		}
+		else {
+			setCallback(callback.toString());
+		}
+	}
 	public void setCallback(String callback) {
 		this.callback = callback;
-	}
-
-	public boolean isIspublic() {
-		return ispublic;
-	}
-	public void setIspublic(boolean ispublic) {
-		this.ispublic = ispublic;
 	}
 
 	public boolean isActive() {
@@ -116,5 +116,10 @@ public class Job extends BaseObject {
 	}
 	public void setScript(Script script) {
 		this.script = script;
+	}
+	
+	@Override
+	public boolean isOwnedBy(User user) {
+		return StringUtils.equals(user.getId(), owner.getId());
 	}
 }

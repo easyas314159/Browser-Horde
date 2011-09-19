@@ -18,7 +18,9 @@ import javax.ws.rs.core.HttpHeaders;
 
 import net.spy.memcached.MemcachedClient;
 
-import com.browserhorde.server.api.ApiHttpHeaders;
+import org.apache.commons.codec.digest.DigestUtils;
+
+import com.browserhorde.server.api.ApiHeaders;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
@@ -28,6 +30,8 @@ public class XMachineIdFilter extends HttpFilter implements Filter {
 			"\\p{XDigit}{8}-\\p{XDigit}{4}-\\p{XDigit}{4}-\\p{XDigit}{4}-\\p{XDigit}{12}"
 		);
 
+	private static final String NS_MACHINE_ID = DigestUtils.md5Hex("machine_id");
+	
 	@Inject private MemcachedClient memcached;
 
 	@Override
@@ -41,7 +45,7 @@ public class XMachineIdFilter extends HttpFilter implements Filter {
 	public void doFilter(HttpServletRequest req, HttpServletResponse rsp, FilterChain chain) throws IOException, ServletException {
 		// TODO: Maybe tie this into auth so we can track the number of machines each user has
 		final String checkHeaders[] = new String[]{
-			ApiHttpHeaders.X_HORDE_MACHINE_ID,
+			ApiHeaders.X_HORDE_MACHINE_ID,
 			HttpHeaders.IF_NONE_MATCH,
 			HttpHeaders.IF_MODIFIED_SINCE
 		};
@@ -74,7 +78,7 @@ public class XMachineIdFilter extends HttpFilter implements Filter {
 		// TODO: Store machine id so it can be accessed by servlets down the chain
 		// TODO: track machine metrics
 
-		rsp.setHeader(ApiHttpHeaders.X_HORDE_MACHINE_ID, machineId);
+		rsp.setHeader(ApiHeaders.X_HORDE_MACHINE_ID, machineId);
 		if(!userIsNice) {
 			rsp.setHeader(HttpHeaders.ETAG, machineId);
 			rsp.setHeader(HttpHeaders.LAST_MODIFIED, machineId);

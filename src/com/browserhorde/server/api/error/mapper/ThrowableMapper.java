@@ -1,4 +1,4 @@
-package com.browserhorde.server.api;
+package com.browserhorde.server.api.error.mapper;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -10,15 +10,16 @@ import javax.ws.rs.ext.Provider;
 import org.apache.log4j.Logger;
 
 @Provider
-@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+@Produces({MediaType.APPLICATION_JSON})
 public class ThrowableMapper implements ExceptionMapper<Throwable> {
 	private final Logger log = Logger.getLogger(getClass());
 
 	@Override
-	public Response toResponse(Throwable ex) {
-		log.warn("Uncaught Exception", ex);
+	public Response toResponse(Throwable t) {
+		log.error("Something Broke!", t);
 		return Response
 			.status(Status.INTERNAL_SERVER_ERROR)
+			.entity(null)
 			.build();
 	}
 }

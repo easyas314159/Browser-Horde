@@ -2,8 +2,8 @@ package com.browserhorde.server.entity;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.google.gson.annotations.Expose;
 
@@ -51,5 +51,10 @@ public class Script extends BaseObject {
 	}
 	public void setDebug(boolean debug) {
 		this.debug = debug;
+	}
+
+	@Override
+	public boolean isOwnedBy(User user) {
+		return StringUtils.equals(user.getId(), getOwner().getId());
 	}
 }

@@ -54,14 +54,13 @@
   </filter>
   <filter-mapping>
     <filter-name>GuiceFilter</filter-name>
+    <url-pattern>/</url-pattern>
     <url-pattern>/jobs/*</url-pattern>
     <url-pattern>/scripts/*</url-pattern>
     <url-pattern>/tasks/*</url-pattern>
     <url-pattern>/results/*</url-pattern>
     <url-pattern>/users/*</url-pattern>
     <url-pattern>/workorders/*</url-pattern>
+    <url-pattern>/benchmarks/*</url-pattern>
   </filter-mapping>
-  <welcome-file-list>
-    <welcome-file>index.html</welcome-file>
-  </welcome-file-list>
 </web-app>

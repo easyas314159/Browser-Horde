@@ -27,10 +27,12 @@ import net.spy.memcached.MemcachedClient;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
 
-import com.browserhorde.server.api.json.ApiResponse;
-import com.browserhorde.server.api.json.ErrorResponse;
-import com.browserhorde.server.api.json.WorkorderResponse;
+import com.amazonaws.services.sqs.AmazonSQSAsync;
+import com.browserhorde.server.api.consumes.WorkorderCheckin;
+import com.browserhorde.server.api.error.NoTasksException;
+import com.browserhorde.server.api.produces.WorkorderCheckout;
 import com.browserhorde.server.cache.Cache;
 import com.browserhorde.server.cache.DistributedCache;
 import com.browserhorde.server.cache.GsonTranscoder;
@@ -38,19 +40,20 @@ import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Task;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.util.ParamUtils;
-import com.browserhorde.server.util.Randomizer;
 import com.google.inject.Inject;
 
 @Path("workorders")
-@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+@Produces({MediaType.APPLICATION_JSON})
 public class WorkorderResource {
-	@Inject private Randomizer randomizer;
+	private static final Integer DEFAULT_TIMEOUT = 3600;
+	private static final String NS_ALL_WORKORDER = DigestUtils.md5Hex("workorders");
+
+	private final Logger log = Logger.getLogger(getClass());
+
+	@Inject private AmazonSQSAsync awsSQS;
 
 	@Inject private Random rs;
 	@Inject private EntityManager entityManager;
-
-	private static final Integer DEFAULT_TIMEOUT = 3600;
-	private static final String NS_ALL_WORKORDER = DigestUtils.md5Hex("workorders");
 
 	private final Cache<String, WorkorderEntry> allWorkorders;
 
@@ -65,23 +68,21 @@ public class WorkorderResource {
 	}
 
 	@GET
-	public Response checkoutWorkorder(
+	public Response checkout(
 			@Context SecurityContext sec,
-			@HeaderParam(ApiHttpHeaders.X_HORDE_MACHINE_ID) String machineId
+			@HeaderParam(ApiHeaders.X_HORDE_MACHINE_ID) String machineId
 		) {
-		return checkoutWorkorderForJob(sec, machineId, null);
+		return checkoutForJob(sec, machineId, null);
 	}
 
 	@GET
 	@Path("{id}")
-	public Response checkoutWorkorderForJob(
+	public Response checkoutForJob(
 			@Context SecurityContext sec,
-			@HeaderParam(ApiHttpHeaders.X_HORDE_MACHINE_ID) String machineId,
+			@HeaderParam(ApiHeaders.X_HORDE_MACHINE_ID) String machineId,
 			@PathParam("id") String id
 		) {
-		// Play some tricks with the modified header to try and track the user
-
-		ApiResponse response = null;
+		Object entity = null;
 
 		User user = (User)sec.getUserPrincipal();
 
@@ -91,8 +92,9 @@ public class WorkorderResource {
 		Job job = (id == null) ? randomJob() : entityManager.find(Job.class, id);
 		Task task = randomTask(job);
 
+		Date expires = null;
 		if(task == null) {
-			response = new ErrorResponse();
+			throw new NoTasksException();
 		}
 		else {
 			String wo = UUID.randomUUID().toString();
@@ -101,9 +103,9 @@ public class WorkorderResource {
 			Calendar c = Calendar.getInstance();
 			c.add(Calendar.SECOND, timeout);
 
-			Date expires = c.getTime();
+			expires = c.getTime();
 
-			response = new WorkorderResponse(wo, expires, task, null);
+			entity = new WorkorderCheckout(wo, expires, task, null);
 			WorkorderEntry entry = new WorkorderEntry(user == null ? null : user.getName(), machineId, task.getId());
 
 			allWorkorders.put(wo, entry, expires);
@@ -112,32 +114,40 @@ public class WorkorderResource {
 		entityManager.close();
 
 		return Response
-			.ok(response)
+			.status(ApiStatus.OK)
+			.entity(entity)
+			.expires(expires)
 			.build()
 			;
 	}
 
 	@POST
-	@Path("{id}/{task}")
-	public Response checkinWorkorder(
+	public Response checkin(
 			@Context SecurityContext sec,
-			@HeaderParam(ApiHttpHeaders.X_HORDE_MACHINE_ID) String machineId,
-			@PathParam("id") String id
+			@HeaderParam(ApiHeaders.X_HORDE_MACHINE_ID) String machineId,
+			WorkorderCheckin checkin
 		) {
 
-		WorkorderEntry entry = allWorkorders.get(id);
+		WorkorderEntry entry = allWorkorders.get(checkin.getId());
 		if(entry == null) {
 			// TODO: return not found or something
 		}
 		else {
 			Principal p = sec.getUserPrincipal();
 			String userId = (p == null) ? null : p.getName();
+			String jobId = checkin.getJob();
+			String taskId = checkin.getTask();
 
-			if(entry.userId == userId || (userId != null && userId.equals(entry.userId))
-				&& entry.machineId == machineId || (machineId != null && machineId.equals(entry.machineId))) {
+			if(StringUtils.equalsIgnoreCase(userId, entry.userId)
+				&& StringUtils.equalsIgnoreCase(machineId, entry.machineId)
+				&& StringUtils.equalsIgnoreCase(taskId, entry.taskId)
+				) {
+				log.debug("Checkin success");
 				// All the parameters check out so this is probably the correct result
+				// TODO: Push job details to statistics queue
 			}
 			else {
+				log.debug("Checkin failed");
 				// TODO: return failed or something
 			}
 		}
@@ -149,23 +159,22 @@ public class WorkorderResource {
 	@Path("{id}")
 	public Response cancelWorkorder(
 			@Context SecurityContext sec,
-			@HeaderParam(ApiHttpHeaders.X_HORDE_MACHINE_ID) String machineId,
+			@HeaderParam(ApiHeaders.X_HORDE_MACHINE_ID) String machineId,
 			@PathParam("id") String id
 		) {
 		User user = (User)sec.getUserPrincipal();
 		WorkorderEntry entry = allWorkorders.get(id);
 
+		// TODO: More checking here to ensure people aren't terminating random WOs
 		if(entry != null && user != null && user.getName().equals(entry.userId)) {
 			allWorkorders.expire(id);
 		}
 
-		ApiResponse response = null;
-		//ApiResponse response = new ApiResponse(ApiResponseStatus.OK);
-		return Response.ok(response).build();
+		return Response.status(ApiStatus.NO_CONTENT).build();
 	}
 
 	private Job randomJob() {
-		String r = randomizer.nextRandomizer();
+		String r = UUID.randomUUID().toString();
 
 		Query le = entityManager.createQuery(
 				"select * from " + Job.class.getName()
@@ -203,7 +212,7 @@ public class WorkorderResource {
 			return null;
 		}
 
-		String r = randomizer.nextRandomizer();
+		String r = UUID.randomUUID().toString();
 
 		Query le = entityManager.createQuery(
 				"SELECT * FROM " + Task.class.getName()

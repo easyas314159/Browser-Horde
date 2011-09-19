@@ -17,7 +17,7 @@ import net.spy.memcached.transcoders.Transcoder;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.log4j.Logger;
 
-import com.browserhorde.server.api.ApiHttpHeaders;
+import com.browserhorde.server.api.ApiHeaders;
 import com.browserhorde.server.cache.GsonTranscoder;
 import com.browserhorde.server.util.GsonUtils;
 import com.google.gson.annotations.Expose;
@@ -26,12 +26,13 @@ import com.google.inject.Singleton;
 
 @Singleton
 public class XRateLimitFilter extends HttpFilter {
-	private static final int RATE_LIMIT = 1000;
-	private static final int RATE_LIMIT_TIMEOUT = 3600;
+	private static final int RATE_LIMIT = 60;
+	private static final int RATE_LIMIT_TIMEOUT = 60;
+	
+	//private static final int RATE_LIMIT = 10;
+	//private static final int RATE_LIMIT_TIMEOUT = 60;
 
 	private static final String NS_RATE_LIMIT = DigestUtils.md5Hex("rate_limit");
-
-	private static final RateLimit INITIAL_RATE_LIMIT = new RateLimit();
 
 	private final Logger log = Logger.getLogger(getClass());
 
@@ -50,31 +51,38 @@ public class XRateLimitFilter extends HttpFilter {
 		String key = NS_RATE_LIMIT + DigestUtils.md5Hex(ip.getAddress());
 
 		Transcoder<RateLimit> tc = new GsonTranscoder<RateLimit>(
-					GsonUtils.getGsonBuilder(),
-					RateLimit.class
+				GsonUtils.getGsonBuilder(),
+				RateLimit.class
 			);
 		CASMutator<RateLimit> mutator = new CASMutator<RateLimit>(
 				memcached, tc
 			);
 
-		int now = (int) (System.currentTimeMillis() / 1000);
+		int now = (int)(System.currentTimeMillis() / 1000);
 		int timeout = now + RATE_LIMIT_TIMEOUT;
 
 		RateLimitMutation rateLimitMutation = new RateLimitMutation(RATE_LIMIT, timeout);
 		try {
-			// FIXME: Actual put a meaningful initial value in here
-			RateLimit rateLimit = new RateLimit(RATE_LIMIT, timeout);
-			rateLimit = mutator.cas(key, rateLimit, timeout, rateLimitMutation);
-			if(rateLimit.isExceeded()) {
-				rsp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-				rsp.addDateHeader("Retry-After", 1000 * rateLimit.getReset());
-				// FIXME: For some reason this counts below 0 for the Retry-After
+			// FIXME: Something is wrong with the handling of timeouts
+			RateLimit rateLimit = memcached.get(key, tc);
+			if(rateLimit == null) {
+				rateLimit = new RateLimit(RATE_LIMIT, timeout);
+				rateLimit = mutator.cas(key, rateLimit, timeout, rateLimitMutation);
 			}
 			else {
-				rsp.addIntHeader(ApiHttpHeaders.X_RATE_LIMIT, rateLimit.getLimit());
-				rsp.addIntHeader(ApiHttpHeaders.X_RATE_LIMIT_REMAINING, rateLimit.getRemaining());
-				rsp.addIntHeader(ApiHttpHeaders.X_RATE_LIMIT_RESET, rateLimit.getReset());
+				timeout = rateLimit.getReset();
+				rateLimit = mutator.cas(key, rateLimit, timeout, rateLimitMutation);
+			}
 
+			rsp.addIntHeader(ApiHeaders.X_RATE_LIMIT, rateLimit.getLimit());
+			rsp.addIntHeader(ApiHeaders.X_RATE_LIMIT_REMAINING, rateLimit.getRemaining());
+			rsp.addDateHeader(ApiHeaders.X_RATE_LIMIT_RESET, 1000L*rateLimit.getReset());
+
+			if(rateLimit.isExceeded()) {
+				rsp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+				rsp.addDateHeader("Retry-After", 1000L*rateLimit.getReset());
+			}
+			else {
 				chain.doFilter(req, rsp);
 			}
 		}
