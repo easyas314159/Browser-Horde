@@ -26,8 +26,9 @@ public class Job extends BaseObject {
 	@Expose
 	private String callback;
 
+	// FIXME: Booleans are not persisting to the database
 	@Expose
-	private boolean active;
+	private Boolean active;
 
 	@Expose
 	private Integer timeout;
@@ -96,10 +97,16 @@ public class Job extends BaseObject {
 		this.callback = callback;
 	}
 
-	public boolean isActive() {
+	public Boolean isActive() {
+		return getActive();
+	}
+	public Boolean getActive() {
 		return active;
 	}
-	public void setActive(boolean active) {
+	public void setActive(Boolean active) {
+		if(active == null) {
+			active = Boolean.FALSE;
+		}
 		this.active = active;
 	}
 
@@ -120,6 +127,6 @@ public class Job extends BaseObject {
 	
 	@Override
 	public boolean isOwnedBy(User user) {
-		return StringUtils.equals(user.getId(), owner.getId());
+		return StringUtils.equals(user.getId(), getOwner().getId());
 	}
 }

@@ -8,9 +8,9 @@ import java.io.Reader;
 import java.io.Writer;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -19,7 +19,6 @@ import java.util.zip.GZIPOutputStream;
 import javax.annotation.security.RolesAllowed;
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
-import javax.servlet.ServletContext;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -35,12 +34,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.UriInfo;
-import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.commons.io.input.TeeInputStream;
 import org.apache.commons.io.output.TeeOutputStream;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIUtils;
 import org.apache.log4j.Logger;
@@ -56,13 +53,14 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.api.consumes.ModifyScriptRequest;
 import com.browserhorde.server.api.error.ForbiddenException;
-import com.browserhorde.server.api.error.InvalidRequestException;
 import com.browserhorde.server.aws.AmazonS3AsyncPutObject;
 import com.browserhorde.server.entity.Script;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.security.Roles;
 import com.browserhorde.server.util.ConcurrentPipeStream;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
+import com.sun.jersey.api.NotFoundException;
 import com.yahoo.platform.yui.compressor.JavaScriptCompressor;
 
 @Path("scripts")
@@ -76,19 +74,14 @@ public class ScriptResource {
 	private static final String FILE_MINIFIED_COMPRESSED = "min.js.gz";
 
 	private final Logger log = Logger.getLogger(getClass());
-	
-	private final String S3_BUCKET;
+
+	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET) private String awsS3Bucket;
 
 	@Inject private EntityManager entityManager;
 	@Inject private ExecutorService executorService;
 	@Inject private FileItemFactory fileFactory;
 
 	@Inject private AmazonS3 awsS3;
-
-	@Inject
-	public ScriptResource(ServletContext context) {
-		S3_BUCKET = context.getInitParameter(ServletInitOptions.AWS_S3_BUCKET);
-	}
 	
 	@GET
 	@RolesAllowed(Roles.REGISTERED)
@@ -111,42 +104,34 @@ public class ScriptResource {
 	@Path("{id}")
 	@RolesAllowed(Roles.REGISTERED)
 	public Response getScript(@Context SecurityContext sec, @PathParam("id") String id) {
-		Object entity = null;
-		
 		User user = (User)sec.getUserPrincipal();
 
-		if(entity == null) {
-			id = StringUtils.trimToNull(id);
-			if(id == null) {
-				throw new InvalidRequestException();
-			}
-			else {
-				Script script = entityManager.find(Script.class, id);
-				if(script == null || !script.isOwnedBy(user)) {
-					throw new ForbiddenException();
-				}
-				entity = script;
-			}
+		// TODO: IS this ownership check necessary?
+		Script script = entityManager.find(Script.class, id);
+		if(script == null || !script.isOwnedBy(user)) {
+			throw new NotFoundException();
 		}
 
-		return Response.ok(entity).build();
+		return Response
+			.status(ApiStatus.OK)
+			.entity(script)
+			.build()
+			;
 	}
 
 	@GET
 	@Path("{id}.js")
 	@Produces({"text/javascript", "application/javascript", "application/x-javascript"})
-	public Response getScriptContent(@Context HttpHeaders headers, @PathParam("id") String id) {
-		id = StringUtils.trimToNull(id);
-		if(id == null) {
-			return Response.status(Status.NOT_FOUND).build();
-		}
-
+	public Response getScriptContent(
+			@Context HttpHeaders headers,
+			@PathParam("id") String id
+		) {
 		Script script = entityManager.find(Script.class, id);
 		if(script == null) {
-			return Response.status(Status.NOT_FOUND).build();
+			throw new NotFoundException();
 		}
 
-		Map<String, Float> acceptedEncodings = new HashMap<String, Float>();
+		Set<String> acceptedEncodings = new HashSet<String>();
 		List<String> acceptHeaders = headers.getRequestHeader(HttpHeaders.ACCEPT_ENCODING);
 		if(acceptHeaders != null) {
 			for(String acceptHeader : acceptHeaders) {
@@ -155,10 +140,16 @@ public class ScriptResource {
 				for(String encoding : encodings) {
 					String details[] = encoding.split("\\s*(;|=)\\s*", 3);
 					if(details.length == 1) {
-						acceptedEncodings.put(details[0], 1.0f);
+						acceptedEncodings.add(details[0]);
 					}
 					else if(details.length == 3 && details[1].equals("q") && details[2].matches("(0(\\.\\d{1,3})?)|(1(\\.0{1,3})?)")) {
-						acceptedEncodings.put(details[0], Float.valueOf(details[2]));
+						Float weight = Float.valueOf(details[2]);
+						if(weight > 0.0f) {
+							acceptedEncodings.add(details[0]);
+						}
+						else {
+							acceptedEncodings.remove(details[0]);
+						}
 					}
 					else {
 						log.debug(String.format("Bad Accept-Encoding header \'%s\'", encoding));
@@ -167,42 +158,17 @@ public class ScriptResource {
 			}
 		}
 
-		boolean gzip = false;
-		Float weightGzip = acceptedEncodings.get("gzip");
-		Float weightIdent = acceptedEncodings.get("identity");
-		Float weightAny = acceptedEncodings.get("*");
-
-		if(weightIdent == null) {
-			weightIdent = 0.001f;
-		}
-
-		if(weightGzip == null) {
-			if(weightAny != null && weightIdent <= weightAny) {
-				gzip = true;
-			}
-		}
-		else {
-			if(weightIdent <= weightGzip) {
-				gzip = true;
-			}
-			else if(weightAny != null && weightIdent <= weightAny) {
-				gzip = true;
-			}
-		}
-
 		boolean mini = !script.isDebug();
+		boolean gzip = acceptedEncodings.contains("gzip");
 
-		String res = gzip ? (mini ? FILE_MINIFIED_COMPRESSED : FILE_COMPRESSED) : (mini ? FILE_MINIFIED : FILE_ORIGINAL);
-		String key = String.format(
-				"%s/%s/%s",
-				BASE_PATH,
+		String key = getObjectKey(
 				script.getId(),
-				res
+				gzip ? (mini ? FILE_MINIFIED_COMPRESSED : FILE_COMPRESSED) : (mini ? FILE_MINIFIED : FILE_ORIGINAL)
 			);
 
 		try {
 			// TODO: If we are using cloud front then we need to be able to change the domain
-			URI uriS3 = URIUtils.createURI("https", "s3.amazonaws.com", -1, S3_BUCKET + "/" + key, null, null);
+			URI uriS3 = URIUtils.createURI("https", "s3.amazonaws.com", -1, awsS3Bucket + "/" + key, null, null);
 			return Response.status(ApiStatus.TEMPORARY_REDIRECT).location(uriS3).build();
 		}
 		catch(URISyntaxException ex) {
@@ -232,9 +198,27 @@ public class ScriptResource {
 			ModifyScriptRequest modifyScript
 		) {
 		User user = (User)sec.getUserPrincipal();
-		// TODO: Create a script
+		
+		Script script = new Script();
 
-		throw new NotImplementedException();
+		script.setOwner(user);
+		script.setName(modifyScript.name);
+		script.setDescription(modifyScript.desccription);
+		script.setDebug(modifyScript.debug);
+
+		entityManager.persist(script);
+
+		URI location = ui.getAbsolutePathBuilder()
+			.path(script.getId())
+			.build()
+			;
+
+		return Response
+			.status(ApiStatus.CREATE)
+			.location(location)
+			.entity(script)
+			.build()
+			;
 	}
 
 	@POST
@@ -243,120 +227,34 @@ public class ScriptResource {
 	@RolesAllowed(Roles.REGISTERED)
 	public Response updateScript(
 			@Context SecurityContext sec,
-			@Context UriInfo ui,
-			@PathParam("id") String scriptId,
+			@PathParam("id") String id,
 			ModifyScriptRequest modifyScript
 		) {
 		User user = (User)sec.getUserPrincipal();
 
-		// TODO: Modify an existing script
-		throw new NotImplementedException();
-	}
-
-	/*
-	@POST
-	@Path("{id}")
-	@Consumes({MediaType.MULTIPART_FORM_DATA})
-	@RolesAllowed(Roles.REGISTERED)
-	public Response createScript(
-			@Context SecurityContext sec,
-			@Context UriInfo ui,
-			RequestContext request
-		) {
-
-		byte [] rawFile = null;
-		Object entity = null;
-
-		User user = (User)sec.getUserPrincipal();
-
-		// TODO: Check user permissions
-		Map<String, String> params = new HashMap<String, String>();
-		if(entity == null) {
-			ServletFileUpload upload = new ServletFileUpload(fileFactory);
-			try {
-				List<FileItem> scripts = new Vector<FileItem>();
-				List<FileItem> items = upload.parseRequest(request);
-				for(FileItem item : items) {
-					if(item.isFormField()) {
-						params.put(
-								item.getFieldName(),
-								item.getString()
-							);
-					}
-					else {
-						scripts.add(item);
-					}
-				}
-
-				if(scripts.size() == 1) {
-					// TODO: Overwrite params with form fields
-					FileItem script = scripts.get(0);
-					rawFile = script.get();
-				}
-				else {
-					throw new InvalidRequestException();
-				}
-			}
-			catch(FileUploadException ex) {
-				log.warn("File upload exception", ex);
-				throw new InvalidRequestException();
-			}
+		Script script = entityManager.find(Script.class, id);
+		if(script == null || !script.isOwnedBy(user)) {
+			throw new ForbiddenException();
 		}
 
-		URI location = null;
-		String name = ParamUtils.asString(params.get("name"), "New Script");
-		String desc = ParamUtils.asString(params.get("desc"));
-		String docurl = ParamUtils.asString(params.get("docurl"));
-		Boolean debug = ParamUtils.asBoolean("debug", Boolean.FALSE);
+		// TODO: This should perform some sort of patch instead of direct overwrite
+		script.setName(modifyScript.name);
+		script.setDescription(modifyScript.desccription);
+		script.setDebug(modifyScript.debug);
 
-		if(entity == null) {
-			Script script = new Script();
+		entityManager.merge(script);
 
-			script.setOwner(user);
-			script.setName(name);
-			script.setDescription(desc);
-			script.setDocurl(docurl);
-
-			script.setDebug(debug);
-
-			entityManager.persist(script);
-
-			location = ui.getBaseUriBuilder()
-				.path(getClass())
-				.path(script.getId())
-				.build()
-				;
-
-			try {
-				// TODO: Parse uploaded script and do a security check
-				storeScript(
-						rawFile,
-						S3_BUCKET,
-						script.getId()
-					);
-			}
-			catch(IOException ex) {
-				log.warn("Store failed!", ex);
-			}
-
-			entity = script;
-		}
-		else {
-			throw new InvalidRequestException();
-		}
-		
 		return Response
-			.status(ApiStatus.CREATE)
-			.location(location)
-			.entity(entity)
+			.status(ApiStatus.OK)
+			.entity(script)
 			.build()
 			;
 	}
-	*/
 
 	@PUT
 	@Path("{id}")
 	@Consumes({"text/javascript", "application/javascript", "application/x-javascript"})
+	@RolesAllowed(Roles.REGISTERED)
 	public Response storeScript(@Context SecurityContext sec, @PathParam("id") String id, InputStream source) {
 		User user = (User)sec.getUserPrincipal();
 
@@ -366,7 +264,7 @@ public class ScriptResource {
 		}
 		else {
 			try {
-				storeScript(source, S3_BUCKET, script.getId());
+				storeScript(source, awsS3Bucket, script.getId());
 			}
 			catch(IOException ex) {
 				throw new WebApplicationException(ex);
@@ -381,6 +279,7 @@ public class ScriptResource {
 	public Response deleteScript(@Context SecurityContext sec, @PathParam("id") String id) {
 		User user = (User)sec.getUserPrincipal();
 		Script script = entityManager.find(Script.class, id);
+
 		if(script == null || !script.isOwnedBy(user)) {
 			throw new ForbiddenException();
 		}
@@ -389,13 +288,13 @@ public class ScriptResource {
 			// TODO: Do all of this either asynchronously or on a completely different server
 
 			ListObjectsRequest listObjects = new ListObjectsRequest()
-				.withBucketName(S3_BUCKET)
-				.withPrefix(String.format("%s/%s", BASE_PATH, script.getId()));
+				.withBucketName(awsS3Bucket)
+				.withPrefix(getObjectKey(script.getId(), null));
 			while(true) {
 				ObjectListing listing = awsS3.listObjects(listObjects);
 
 				for(S3ObjectSummary summary : listing.getObjectSummaries()) {
-					awsS3.deleteObject(S3_BUCKET, summary.getKey());
+					awsS3.deleteObject(awsS3Bucket, summary.getKey());
 				}
 
 				String marker = listing.getMarker();
@@ -410,7 +309,6 @@ public class ScriptResource {
 		return Response.status(ApiStatus.NO_CONTENT).build();
 	}
 
-	// TODO: This seems to be missing the ACL stuff
 	private void storeScript(InputStream source, String bucket, String id) throws IOException {
 		String prefix = String.format("scripts/%s", id);
 
@@ -435,8 +333,8 @@ public class ScriptResource {
 		final ObjectMetadata metaRaw = new ObjectMetadata();
 		final ObjectMetadata metaComp = new ObjectMetadata();
 
-		metaRaw.setContentType("application/javascript");
-		metaComp.setContentType("application/javascript");
+		metaRaw.setContentType("text/javascript");
+		metaComp.setContentType("text/javascript");
 		metaComp.setContentEncoding("gzip");
 
 		// Perform crazy async file upload
@@ -466,5 +364,9 @@ public class ScriptResource {
 		Future<PutObjectResult> fMiniComp = executorService.submit(new AmazonS3AsyncPutObject(
 				awsS3, new PutObjectRequest(bucket, keyCompMini, pipeCompMini.getInputStream(), metaComp), CannedAccessControlList.PublicRead
 			));
+	}
+
+	private String getObjectKey(String id, String file) {
+		return String.format("%s/%s/%s", BASE_PATH, id, file == null ? StringUtils.EMPTY : file);
 	}
 }

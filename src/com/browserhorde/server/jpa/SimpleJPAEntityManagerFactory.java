@@ -11,7 +11,11 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.simpledb.AmazonSimpleDB;
 import com.amazonaws.services.simpledb.AmazonSimpleDBAsyncClient;
 import com.amazonaws.services.simpledb.AmazonSimpleDBClient;
+import com.spaceprogram.simplejpa.AnnotationInfo;
 import com.spaceprogram.simplejpa.EntityManagerFactoryImpl;
+import com.spaceprogram.simplejpa.cache.Cache;
+import com.spaceprogram.simplejpa.cache.CacheFactory;
+import com.spaceprogram.simplejpa.cache.NoopCacheFactory;
 
 /**
  * 
@@ -35,6 +39,8 @@ public class SimpleJPAEntityManagerFactory extends EntityManagerFactoryImpl {
 	public static final String PARAM_AWS_DOMAIN_MAPPINGS = "aws.domain_mapping";
 	public static final String PARAM_AWS_DOMAIN_PREFIX = "aws.domain_prefix";
 
+	public static final String PARAM_CACHE_FACTORY = "cache_factory";
+
 	private ExecutorService awsExecutorService = null;
 
 	private AWSCredentials awsCredentials = null;
@@ -42,6 +48,8 @@ public class SimpleJPAEntityManagerFactory extends EntityManagerFactoryImpl {
 
 	private AmazonS3 awsS3 = null;
 	private AmazonSimpleDB awsSDB = null;
+
+	private CacheFactory cacheFactory;
 
 	@SuppressWarnings("unchecked")
 	public SimpleJPAEntityManagerFactory(String persistenceUnitName, Map props) {
@@ -54,6 +62,7 @@ public class SimpleJPAEntityManagerFactory extends EntityManagerFactoryImpl {
 		initAWSCredentials(map);
 		initAWSClientConfiguration(map);
 		initAWSExecutorService(map);
+		initCacheFactory(map);
 
 		awsS3 = (AmazonS3)map.get(PARAM_AWS_S3);
 		awsSDB = (AmazonSimpleDB)map.get(PARAM_AWS_SDB);
@@ -99,6 +108,20 @@ public class SimpleJPAEntityManagerFactory extends EntityManagerFactoryImpl {
 		}
 	}
 
+	private void initCacheFactory(Map<String, Object> map) {
+		Class<? extends CacheFactory> cacheFactoryClass = (Class<? extends CacheFactory>)map.get(PARAM_CACHE_FACTORY);
+		if(cacheFactoryClass != null) try {
+			this.cacheFactory = cacheFactoryClass.newInstance();
+		} catch(InstantiationException e) {
+			e.printStackTrace();
+		} catch(IllegalAccessException e) {
+			e.printStackTrace();
+		}
+		if(this.cacheFactory == null) {
+			this.cacheFactory = new NoopCacheFactory();
+		}
+	}
+
 	@Override
 	public AmazonSimpleDB getSimpleDb() {
 		return awsSDB;
@@ -112,5 +135,12 @@ public class SimpleJPAEntityManagerFactory extends EntityManagerFactoryImpl {
 	@Override
 	public ExecutorService getExecutor() {
 		return awsExecutorService;
+	}
+	
+	@Override
+	@SuppressWarnings("unchecked")
+	public Cache getCache(Class clazz) {
+		AnnotationInfo ai = getAnnotationManager().getAnnotationInfo(clazz);
+		return cacheFactory.createCache(ai.getRootClass().getName());
 	}
 }

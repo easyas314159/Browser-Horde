@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javax.persistence.EntityManagerFactory;
-import javax.servlet.ServletContext;
 
 import org.apache.log4j.Logger;
 
@@ -16,39 +15,40 @@ import com.browserhorde.server.entity.Result;
 import com.browserhorde.server.entity.Script;
 import com.browserhorde.server.entity.Task;
 import com.browserhorde.server.entity.User;
-import com.browserhorde.server.jpa.SimpleDBEntityManagerFactory;
 import com.browserhorde.server.jpa.SimpleJPAEntityManagerFactory;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.google.inject.name.Named;
+import com.spaceprogram.simplejpa.cache.KittyCacheFactory;
 
 public class EntityManagerFactoryProvider implements Provider<EntityManagerFactory> {
 	private final Logger log = Logger.getLogger(getClass());
 
-	@Inject private ServletContext context;
+	@Inject @Named(ServletInitOptions.AWS_SIMPLEDB_DOMAIN_PREFIX) private String awsDomainPrefix;
 
 	@Inject private AmazonS3 awsS3;
 	@Inject private AmazonSimpleDB awsSDB;
+	
 
 	@Override
 	public EntityManagerFactory get() {
-		String persistenceUnitName = context.getInitParameter(ServletInitOptions.AWS_SIMPLEDB_DOMAIN_PREFIX);
-
 		Map<String, Object> params = new HashMap<String, Object>();
 
-		params.put(SimpleDBEntityManagerFactory.PARAM_AWS_S3, awsS3);
-		params.put(SimpleDBEntityManagerFactory.PARAM_AWS_SDB, awsSDB);
+		params.put(SimpleJPAEntityManagerFactory.PARAM_AWS_S3, awsS3);
+		params.put(SimpleJPAEntityManagerFactory.PARAM_AWS_SDB, awsSDB);
 
-		String domainPrefix = context.getInitParameter(ServletInitOptions.AWS_SIMPLEDB_DOMAIN_PREFIX);
-		params.put(SimpleDBEntityManagerFactory.PARAM_AWS_DOMAIN_PREFIX, domainPrefix);
+		params.put(SimpleJPAEntityManagerFactory.PARAM_CACHE_FACTORY, KittyCacheFactory.class);
+
+		params.put(SimpleJPAEntityManagerFactory.PARAM_AWS_DOMAIN_PREFIX, awsDomainPrefix);
 		
 		Map<Class<?>, String> domainMappings = new HashMap<Class<?>, String>();
-		params.put(SimpleDBEntityManagerFactory.PARAM_AWS_DOMAIN_MAPPINGS, domainMappings);
+		params.put(SimpleJPAEntityManagerFactory.PARAM_AWS_DOMAIN_MAPPINGS, domainMappings);
 
-		domainMappings.put(User.class, domainPrefix + "users");
-		domainMappings.put(Job.class, domainPrefix + "jobs");
-		domainMappings.put(Script.class, domainPrefix + "scripts");
-		domainMappings.put(Task.class, domainPrefix + "tasks");
-		domainMappings.put(Result.class, domainPrefix + "results");
+		domainMappings.put(User.class, awsDomainPrefix + "users");
+		domainMappings.put(Job.class, awsDomainPrefix + "jobs");
+		domainMappings.put(Script.class, awsDomainPrefix + "scripts");
+		domainMappings.put(Task.class, awsDomainPrefix + "tasks");
+		domainMappings.put(Result.class, awsDomainPrefix + "results");
 
 		// TODO: These are only here to work around SimpleJPAs limitations
 		params.put("cacheFactory", null);
@@ -57,7 +57,7 @@ public class EntityManagerFactoryProvider implements Provider<EntityManagerFacto
 
 		EntityManagerFactory factory = null;
 		try {
-			factory = new SimpleJPAEntityManagerFactory(persistenceUnitName, params);
+			factory = new SimpleJPAEntityManagerFactory(awsDomainPrefix, params);
 		}
 		catch(Throwable t) {
 			log.fatal("Failed to create EntityManagerFactory", t);

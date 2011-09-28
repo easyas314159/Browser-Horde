@@ -18,7 +18,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.log4j.Logger;
 
 import com.browserhorde.server.api.ApiHeaders;
-import com.browserhorde.server.cache.GsonTranscoder;
+import com.browserhorde.server.gson.GsonTranscoder;
 import com.browserhorde.server.util.GsonUtils;
 import com.google.gson.annotations.Expose;
 import com.google.inject.Inject;

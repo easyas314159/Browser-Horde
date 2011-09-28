@@ -5,7 +5,7 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Vector;
 
-import javax.servlet.ServletContext;
+import javax.annotation.Nullable;
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactory;
@@ -23,20 +23,23 @@ import com.amazonaws.services.elasticache.model.DescribeCacheClustersRequest;
 import com.amazonaws.services.elasticache.model.DescribeCacheClustersResult;
 import com.amazonaws.services.elasticache.model.Endpoint;
 import com.browserhorde.server.ServletInitOptions;
-import com.browserhorde.server.util.ParamUtils;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.google.inject.name.Named;
 
 public class MemcachedClientProvider implements Provider<MemcachedClient> {
 	private final Logger log = Logger.getLogger(getClass());
 
-	@Inject private ServletContext context;
+	@Inject @Nullable @Named(ServletInitOptions.MEMCACHED_CLUSTER) private String cluster;
+	@Inject @Nullable @Named(ServletInitOptions.MEMCACHED_CLUSTER_ID) private String clusterId;
+	@Inject @Nullable @Named(ServletInitOptions.MEMCACHED_CONNECTION_FACTORY) private String connectionFactoryClassName;
+
 	@Inject private AmazonElastiCacheAsync elastiCache;
 
 	@Override
 	public MemcachedClient get() {
 		ClassLoader loader = ConnectionFactory.class.getClassLoader();
-		String connectionFactoryClassName = StringUtils.trimToNull(context.getInitParameter(ServletInitOptions.MEMCACHED_CONNECTION_FACTORY));
+		connectionFactoryClassName = StringUtils.trimToNull(connectionFactoryClassName);
 
 		ConnectionFactory connectionFactory = null;
 		if(connectionFactoryClassName != null) {
@@ -56,9 +59,9 @@ public class MemcachedClientProvider implements Provider<MemcachedClient> {
 
 		MemcachedClient memcached = null;
 		List<InetSocketAddress> clusterAddress = null;
-		String cluster = StringUtils.trimToNull(context.getInitParameter(ServletInitOptions.MEMCACHED_CLUSTER));
+		cluster = StringUtils.trimToNull(cluster);
 		if(cluster == null) {
-			String clusterId = ParamUtils.asString(context.getInitParameter(ServletInitOptions.MEMCACHED_CLUSTER_ID));
+			clusterId = StringUtils.trimToNull(clusterId);
 			if(clusterId != null) {
 				DescribeCacheClustersRequest describeReq = new DescribeCacheClustersRequest()
 					.withShowCacheNodeInfo(true)

@@ -1,4 +1,4 @@
-package com.browserhorde.server.cache;
+package com.browserhorde.server.gson;
 
 import net.spy.memcached.CachedData;
 import net.spy.memcached.transcoders.Transcoder;

@@ -1,15 +1,14 @@
 package com.browserhorde.server.inject;
 
-import javax.servlet.ServletContext;
-
 import com.amazonaws.ClientConfiguration;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.util.ParamUtils;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.google.inject.name.Named;
 
 public class ClientConfigurationProvider implements Provider<ClientConfiguration> {
-	@Inject private ServletContext context;
+	@Inject @Named(ServletInitOptions.AWS_USER_AGENT) private String awsUserAgent;
 
 	@Override
 	public ClientConfiguration get() {
@@ -17,7 +16,7 @@ public class ClientConfigurationProvider implements Provider<ClientConfiguration
 
 		config.setUserAgent(
 				ParamUtils.asString(
-						context.getInitParameter(ServletInitOptions.AWS_USER_AGENT),
+						awsUserAgent,
 						config.getUserAgent()
 					)
 				);

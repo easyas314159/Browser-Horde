@@ -24,8 +24,8 @@ public class Configurator implements ServletContextListener {
 	public void contextInitialized(ServletContextEvent event) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-	
-			// TODO: This need to be tightened up security wise
+
+			// TODO: This needs to be tightened up security wise
 			GsonUtils.getGsonBuilder()
 				.setPrettyPrinting()
 				.excludeFieldsWithoutExposeAnnotation()

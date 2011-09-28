@@ -8,17 +8,16 @@ import com.google.gson.annotations.Expose;
 @Entity
 public class Task extends BaseObject {
 	@Expose
-	public Job job;
+	private Job job;
 
-	public String randomizer;
+	private String randomizer;
 
+	// FIXME: Booleans are not persisting to the database
 	@Expose
-	private boolean active;
+	private Boolean active;
 
 	@Expose
 	private Integer timeout;
-
-	// TODO: Were do we keep the data?
 
 	@ManyToOne
 	public Job getJob() {
@@ -38,7 +37,10 @@ public class Task extends BaseObject {
 	public boolean isActive() {
 		return active;
 	}
-	public void setActive(boolean active) {
+	public void setActive(Boolean active) {
+		if(active == null) {
+			active = Boolean.FALSE;
+		}
 		this.active = active;
 	}
 
@@ -51,6 +53,6 @@ public class Task extends BaseObject {
 
 	@Override
 	public boolean isOwnedBy(User user) {
-		return job.isOwnedBy(user);
+		return getJob().isOwnedBy(user);
 	}
 }

@@ -5,7 +5,7 @@ public final class ServletInitOptions {
 
 	// Thread Pool
 	public static final String EXECUTOR_CORE_POOL_SIZE = "executor.core_pool_size"; 
-	public static final String EXECUTOR_CORE_THREAD_TIMEOUT = "executor.core_thread_timeout";
+	public static final String EXECUTOR_KEEP_ALIVE_TIMEOUT = "executor.core_thread_timeout";
 	public static final String EXECUTOR_ALLOW_CORE_THREAD_TIMEOUT = "executor.allow_core_thread_timeout";
 	public static final String EXECUTOR_MAX_POOL_SIZE = "executor.max_pool_size";
 

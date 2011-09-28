@@ -35,6 +35,8 @@ public class SimpleDBEntityManagerFactory implements EntityManagerFactory {
 	public static final String PARAM_AWS_DOMAIN_MAPPINGS = "aws.domain_mapping";
 	public static final String PARAM_AWS_DOMAIN_PREFIX = "aws.domain_prefix";
 
+	public static final String PARAM_CACHE_FACTORY = "cache_factory";
+
 	private final Logger log = Logger.getLogger(getClass());
 
 	private volatile boolean closed = false;

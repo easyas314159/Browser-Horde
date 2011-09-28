@@ -28,7 +28,6 @@ public abstract class BaseObject implements Ided, Timestamped, Serializable {
 	private Date updated;
 
 	@Id
-	@GeneratedValue(strategy=GenerationType.AUTO)
 	@Override
 	public String getId() {
 		return id;

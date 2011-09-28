@@ -35,10 +35,10 @@ import com.browserhorde.server.api.error.NoTasksException;
 import com.browserhorde.server.api.produces.WorkorderCheckout;
 import com.browserhorde.server.cache.Cache;
 import com.browserhorde.server.cache.DistributedCache;
-import com.browserhorde.server.cache.GsonTranscoder;
 import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Task;
 import com.browserhorde.server.entity.User;
+import com.browserhorde.server.gson.GsonTranscoder;
 import com.browserhorde.server.util.ParamUtils;
 import com.google.inject.Inject;
 

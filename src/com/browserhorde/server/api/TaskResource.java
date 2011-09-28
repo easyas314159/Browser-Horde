@@ -1,15 +1,16 @@
 package com.browserhorde.server.api;
 
-import java.util.List;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.charset.Charset;
+import java.util.Date;
 import java.util.UUID;
 
 import javax.annotation.security.RolesAllowed;
 import javax.persistence.EntityManager;
-import javax.persistence.Query;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
@@ -20,123 +21,168 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
-import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.commons.lang3.StringUtils;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
+import com.browserhorde.server.ServletInitOptions;
+import com.browserhorde.server.api.consumes.ModifyTaskRequest;
 import com.browserhorde.server.api.error.ForbiddenException;
-import com.browserhorde.server.api.error.InvalidRequestException;
 import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Task;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.security.Roles;
+import com.browserhorde.server.util.GsonUtils;
+import com.google.gson.JsonElement;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
+import com.sun.jersey.api.NotFoundException;
 
 @Path("tasks")
 @Produces({MediaType.APPLICATION_JSON})
 public class TaskResource {
-	@Inject EntityManager entityManager;
+	private static final String BASE_KEY = "tasks";
+
+	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET) private String S3_BUCKET;
+
+	@Inject private AmazonS3 awsS3;
+
+	@Inject private EntityManager entityManager;
 
 	@GET
-	@Path("{job}")
 	@RolesAllowed(Roles.REGISTERED)
-	public Response listTasks(@PathParam("job") String jobId) {
-		Job job = null;
-		Object response = null;
-
-		jobId = StringUtils.trimToNull(jobId);
-		if(jobId == null) {
-			throw new InvalidRequestException();
-		}
-		else {
-			job = entityManager.find(Job.class, jobId);
-			if(job == null) {
-				throw new InvalidRequestException();
-			}
-		}
-
-		if(response == null) {
-			Query query = entityManager.createQuery(
-					"select * from " + Task.class.getName()
-					+ " where job=:job"
-				);
-			query.setParameter("job", job);
-			List<?> results = query.getResultList();
-			response = results;
-		}
-
-		return Response.ok(response).build();
+	public Response listTasks(@Context SecurityContext sec) {
+		throw new NotImplementedException();
 	}
 
 	@GET
-	@Path("{job}/{task}")
+	@Path("{id}")
 	public Response getTask(
-			@PathParam("job") String jobId,
-			@PathParam("task") String taskId
+			@Context SecurityContext sec,
+			@PathParam("id") String id
 		) {
-		Object response = null;
-
-		jobId = StringUtils.trimToNull(jobId);
-		taskId = StringUtils.trimToNull(taskId);
-		if(jobId == null || taskId == null) {
-			throw new InvalidRequestException();
+		Task task = entityManager.find(Task.class, id);
+		if(task == null) {
+			throw new NotFoundException();
 		}
 
-		if(response == null) {
-			Task task = entityManager.find(Task.class, taskId);
-			if(task == null || !task.getJob().getId().equals(jobId)) {
-				return Response.status(Status.NOT_FOUND).build();
-			}
-			response = task;
-		}
-
-		return Response.ok(response).build();
+		return Response
+			.status(ApiStatus.OK)
+			.entity(task)
+			.build()
+			;
 	}
 
 	@POST
 	@RolesAllowed(Roles.REGISTERED)
 	public Response createTask(
-			@FormParam("job") String jobId,
-			@FormParam("timeout") Integer timeout,
-			@FormParam("active") @DefaultValue("true") Boolean active,
-			@FormParam("public") @DefaultValue("true") Boolean freeforall
+			@Context SecurityContext sec,
+			@Context UriInfo ui,
+			ModifyTaskRequest taskCreate
 		) {
 
-		Object response = null;
+		User user = (User)sec.getUserPrincipal();
+		Job job = entityManager.find(Job.class, taskCreate.job);
 
-		Job job = entityManager.find(Job.class, jobId);
-		if(job == null) {
-			throw new InvalidRequestException();
-		}
-		else {
-			Task task = new Task();
-
-			task.setRandomizer(UUID.randomUUID().toString());
-			task.setJob(job);
-			task.setActive(active);
-			if(timeout > 0) {
-				task.setTimeout(timeout);
-			}
-
-			entityManager.persist(task);
+		if(job == null || !job.isOwnedBy(user)) {
+			throw new ForbiddenException();
 		}
 
-		return Response.ok(response).build();
+		Task task = new Task();
+		task.setRandomizer(UUID.randomUUID().toString());
+		task.setJob(job);
+		task.setActive(taskCreate.active);
+		if(taskCreate.timeout != null && taskCreate.timeout > 0) {
+			task.setTimeout(taskCreate.timeout);
+		}
+
+		entityManager.persist(task);
+		URI location = ui.getAbsolutePathBuilder()
+			.path(task.getId())
+			.build()
+			;
+
+		return Response
+			.status(ApiStatus.CREATE)
+			.location(location)
+			.entity(task)
+			.build()
+			;
 	}
 
 	@POST
-	@Consumes(MediaType.MULTIPART_FORM_DATA)
+	@Path("{id}")
 	@RolesAllowed(Roles.REGISTERED)
-	public Response uploadTask() {
-		throw new NotImplementedException();
+	public Response updateTask(
+			@Context SecurityContext sec,
+			@PathParam("id") String id,
+			ModifyTaskRequest modifyTask
+		) {
+
+		User user = (User)sec.getUserPrincipal();
+		Task task = entityManager.find(Task.class, id);
+		if(task == null || !task.isOwnedBy(user)) {
+			throw new ForbiddenException();
+		}
+
+		if(!task.getJob().getId().equalsIgnoreCase(modifyTask.job)) {
+			Job job = entityManager.find(Job.class, modifyTask.job);
+			if(job != null && job.isOwnedBy(user)) {
+				task.setJob(job);
+			}
+		}
+		
+		task.setActive(modifyTask.active);
+		task.setTimeout(modifyTask.timeout);
+
+		entityManager.merge(task);
+
+		return Response
+			.status(ApiStatus.OK)
+			.entity(task)
+			.build()
+			;
 	}
 
 	@PUT
 	@Path("{id}")
+	@Consumes({MediaType.APPLICATION_JSON})
 	@RolesAllowed(Roles.REGISTERED)
-	public Response updateTask(@PathParam("id") String id) {
-		throw new NotImplementedException();
+	public Response storeTaskData(
+			@Context SecurityContext sec,
+			@PathParam("id") String id,
+			JsonElement source
+		) {
+		User user = (User)sec.getUserPrincipal();
+
+		Task task = entityManager.find(Task.class, id);
+		if(task == null || !task.isOwnedBy(user)) {
+			throw new ForbiddenException();
+		}
+
+		String key = String.format("%s/%s/%s", BASE_KEY, task.getJob().getId(), task.getId());
+
+		byte [] raw = GsonUtils.newGson().toJson(source).getBytes(Charset.forName("UTF-8"));
+		InputStream stream = new ByteArrayInputStream(raw);
+
+		ObjectMetadata metadata = new ObjectMetadata();
+		metadata.setLastModified(new Date());
+		metadata.setContentType("application/json; charset=utf-8");
+
+		PutObjectRequest putRequest = new PutObjectRequest(S3_BUCKET, key, stream, metadata);
+		PutObjectResult putResult = awsS3.putObject(putRequest);
+
+		awsS3.setObjectAcl(S3_BUCKET, key, CannedAccessControlList.PublicRead);
+
+		// TODO: gzip data
+		// TODO: Increment billing
+
+		return Response.status(ApiStatus.ACCEPTED).build();
 	}
 
 	@DELETE
@@ -149,10 +195,11 @@ public class TaskResource {
 		if(task == null || !task.isOwnedBy(user)) {
 			throw new ForbiddenException();
 		}
-		else {
-			entityManager.remove(task);
-			// TODO: Delete any associated results
-		}
+
+		entityManager.remove(task);
+
+		// TODO: Delete task data
+		// TODO: Delete any associated results
 
 		return Response.status(ApiStatus.NO_CONTENT).build();
 	}

@@ -17,11 +17,14 @@ import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
 
 import com.browserhorde.server.entity.User;
 
 @Path("")
 public class RootResource {
+	private final Logger log = Logger.getLogger(getClass());
+
 	@GET
 	public Response serviceDiscovery(
 			@Context SecurityContext sec,

@@ -1,5 +1,6 @@
 package com.browserhorde.server.api;
 
+import java.net.URI;
 import java.util.UUID;
 
 import javax.annotation.security.RolesAllowed;
@@ -8,7 +9,6 @@ import javax.persistence.Query;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -16,14 +16,13 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
-
-import org.apache.commons.lang3.StringUtils;
+import javax.ws.rs.core.UriInfo;
 
 import com.browserhorde.server.api.consumes.ModifyJobRequest;
 import com.browserhorde.server.api.error.ForbiddenException;
-import com.browserhorde.server.api.error.InvalidRequestException;
 import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Script;
+import com.browserhorde.server.entity.Task;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.security.Roles;
 import com.google.inject.Inject;
@@ -54,20 +53,36 @@ public class JobResource {
 	@GET
 	@Path("{id}")
 	public Response getJob(@PathParam("id") String id) {
-		Object response = null;
+		Job job = entityManager.find(Job.class, id);
+		if(job == null) {
+			throw new NotFoundException();
+		}
 
-		if(response == null) {
-			id = StringUtils.trimToNull(id);
-			if(id == null) {
-				throw new InvalidRequestException();
-			}
-			else {
-				Job job = entityManager.find(Job.class, id);
-				if(job == null) {
-					throw new NotFoundException();
-				}
-				response = job;
-			}
+		return Response
+			.status(ApiStatus.OK)
+			.entity(job)
+			.build()
+			;
+	}
+
+	@GET
+	@Path("{id}/tasks")
+	@RolesAllowed(Roles.REGISTERED)
+	public Response listJobTasks(@Context SecurityContext sec, @PathParam("id") String id) {
+		Object response = null;
+		User user = (User)sec.getUserPrincipal();
+
+		Job job = entityManager.find(Job.class, id);
+		if(job == null || !job.isOwnedBy(user)) {
+			throw new ForbiddenException();
+		}
+		else {
+			Query query = entityManager.createQuery(
+					"select * from " + Task.class.getName()
+					+ " where job=:job"
+				);
+			query.setParameter("job", job);
+			response = query.getResultList();
 		}
 
 		return Response.ok(response).build();
@@ -77,67 +92,82 @@ public class JobResource {
 	@RolesAllowed(Roles.REGISTERED)
 	public Response createJob(
 			@Context SecurityContext sec,
+			@Context UriInfo ui,
 			ModifyJobRequest jobCreate
 		) {
-
-		Object response = null;
-
 		User user = (User)sec.getUserPrincipal();
+		Script script = entityManager.find(Script.class, jobCreate.script);
 
-		String scriptId = StringUtils.trimToNull(jobCreate.script);
-		if(scriptId == null) {
-			throw new InvalidRequestException();
-		}
-		else {
-			Script script = entityManager.find(Script.class, scriptId);
-			if(script == null) {
-				throw new InvalidRequestException();
-			}
-			else {
-				// TODO: Some input validation here would be nice
-				Job job = new Job();
-	
-				job.setOwner(user);
-				job.setRandomizer(UUID.randomUUID().toString());
-				job.setName(jobCreate.name);
-				job.setDescription(jobCreate.description);
-				job.setWebsite(jobCreate.website);
-				job.setCallback(jobCreate.callback);
-				job.setActive(jobCreate.active);
-				job.setTimeout(jobCreate.timeout);
-				job.setScript(script);
-	
-				// TODO: Check to make sure it successfully persisted
-				entityManager.persist(job);
-				response = job;
-			}
+		if(script == null || !script.isOwnedBy(user)) {
+			throw new ForbiddenException();
 		}
 
-		return Response.ok(response).build();
+		// TODO: Some input validation here would be nice
+		Job job = new Job();
+
+		job.setOwner(user);
+		job.setRandomizer(UUID.randomUUID().toString());
+		job.setName(jobCreate.name);
+		job.setDescription(jobCreate.description);
+		job.setWebsite(jobCreate.website);
+		job.setCallback(jobCreate.callback);
+		job.setActive(jobCreate.active);
+		job.setTimeout(jobCreate.timeout);
+		job.setScript(script);
+
+		// TODO: Check to make sure it successfully persisted
+		entityManager.persist(job);
+
+		URI location = ui.getAbsolutePathBuilder()
+			.path(job.getId())
+			.build()
+			;
+
+		return Response
+			.status(ApiStatus.CREATE)
+			.location(location)
+			.entity(job)
+			.build()
+			;
 	}
 
-	@PUT
+	@POST
 	@Path("{id}")
 	@RolesAllowed(Roles.REGISTERED)
 	public Response updateJob(
 			@Context SecurityContext sec,
 			@PathParam("id") String id,
-			ModifyJobRequest jobUpdate
+			ModifyJobRequest modifyJob
 		) {
 		User user = (User)sec.getUserPrincipal();
 		Job job = entityManager.find(Job.class, id);
 
-		if(job == null) {
-			// TODO: Job doesn't exist
-		}
-		else if(!job.isOwnedBy(user)) {
-			// TODO: Job isn't owned by this user
-		}
-		else {
-			// TODO: Update job
+		if(job == null || !job.isOwnedBy(user)) {
+			throw new ForbiddenException();
 		}
 
-		return Response.ok().build();
+		if(!job.getScript().getId().equalsIgnoreCase(modifyJob.script)) {
+			Script script = entityManager.find(Script.class, modifyJob.script);
+			if(script != null && script.isOwnedBy(user)) {
+				job.setScript(script);
+			}
+		}
+
+		// TODO: This should perform some sort of patch instead of direct overwrite
+		job.setName(modifyJob.name);
+		job.setDescription(modifyJob.description);
+		job.setWebsite(modifyJob.website);
+		job.setCallback(modifyJob.callback);
+		job.setActive(modifyJob.active);
+		job.setTimeout(modifyJob.timeout);
+
+		entityManager.merge(job);
+
+		return Response
+			.status(ApiStatus.OK)
+			.entity(job)
+			.build()
+			;
 	}
 
 	@DELETE
@@ -147,18 +177,17 @@ public class JobResource {
 			@Context SecurityContext sec,
 			@PathParam("id") String id
 		) {
-		Object response = null;
-
 		User user = (User)sec.getUserPrincipal();
-		if(response == null) {
-			Job job = entityManager.find(Job.class, id);
-			if(job == null || !job.isOwnedBy(user)) {
-				throw new ForbiddenException();
-			}
-			else {
-				entityManager.remove(job);
-				// TODO: Delete any associated tasks
-			}
+		Job job = entityManager.find(Job.class, id);
+
+		if(job == null || !job.isOwnedBy(user)) {
+			throw new ForbiddenException();
+		}
+		else {
+			entityManager.remove(job);
+
+			// TODO: Delete any associated tasks
+			// TODO: Delete task data and results
 		}
 
 		return Response.status(ApiStatus.NO_CONTENT).build();
