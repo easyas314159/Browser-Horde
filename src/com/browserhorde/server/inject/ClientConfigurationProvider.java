@@ -8,7 +8,7 @@ import com.google.inject.Provider;
 import com.google.inject.name.Named;
 
 public class ClientConfigurationProvider implements Provider<ClientConfiguration> {
-	@Inject @Named(ServletInitOptions.AWS_USER_AGENT) private String awsUserAgent;
+	@Inject @Named(ServletInitOptions.USER_AGENT) private String awsUserAgent;
 
 	@Override
 	public ClientConfiguration get() {

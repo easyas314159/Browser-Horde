@@ -1,7 +1,9 @@
 package com.browserhorde.server;
 
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 
@@ -194,26 +196,41 @@ public class DependencyInjection extends GuiceServletContextListener {
 						}
 
 						private void bindServletInitOptions() {
-							ServletContext context = getServletContext();
+							Properties p = new Properties();
+							ServletContext ctx = getServletContext();
+							Enumeration<String> params = ctx.getInitParameterNames();
+							while(params.hasMoreElements()) {
+								String param = params.nextElement();
+								p.setProperty(param, ctx.getInitParameter(param));
+							}
 
-							bindNamed(String.class, ServletInitOptions.AWS_ACCESS_KEY, context.getInitParameter(ServletInitOptions.AWS_ACCESS_KEY));
-							bindNamed(String.class, ServletInitOptions.AWS_SECRET_KEY, context.getInitParameter(ServletInitOptions.AWS_SECRET_KEY));
+							p = new Properties(p);
+							p.putAll(System.getenv());
 
-							bindNamed(String.class, ServletInitOptions.AWS_USER_AGENT, context.getInitParameter(ServletInitOptions.AWS_USER_AGENT));
+							bindNamed(String.class, ServletInitOptions.AWS_ACCESS_KEY, p.getProperty(ServletInitOptions.AWS_ACCESS_KEY));
+							bindNamed(String.class, ServletInitOptions.AWS_SECRET_KEY, p.getProperty(ServletInitOptions.AWS_SECRET_KEY));
 
-							bindNamed(String.class, ServletInitOptions.AWS_S3_BUCKET, context.getInitParameter(ServletInitOptions.AWS_S3_BUCKET));
-							bindNamed(String.class, ServletInitOptions.AWS_SIMPLEDB_DOMAIN_PREFIX, context.getInitParameter(ServletInitOptions.AWS_SIMPLEDB_DOMAIN_PREFIX));
+							bindNamed(String.class, ServletInitOptions.USER_AGENT, p.getProperty(ServletInitOptions.USER_AGENT));
 
-							bindNamed(String.class, ServletInitOptions.AWS_SES_SENDER, context.getInitParameter(ServletInitOptions.AWS_SES_SENDER));
+							String awsS3Bucket = p.getProperty(ServletInitOptions.AWS_S3_BUCKET);
+							String awsS3BucketEndpoint = String.format("%s.s3.amazonaws.com", awsS3Bucket);
 
-							bindNamed(Integer.class, ServletInitOptions.EXECUTOR_CORE_POOL_SIZE, ParamUtils.asInteger(context.getInitParameter(ServletInitOptions.EXECUTOR_CORE_POOL_SIZE), 1));
-							bindNamed(Integer.class, ServletInitOptions.EXECUTOR_MAX_POOL_SIZE, ParamUtils.asInteger(context.getInitParameter(ServletInitOptions.EXECUTOR_MAX_POOL_SIZE), 4));
-							bindNamed(Integer.class, ServletInitOptions.EXECUTOR_KEEP_ALIVE_TIMEOUT, ParamUtils.asInteger(context.getInitParameter(ServletInitOptions.EXECUTOR_KEEP_ALIVE_TIMEOUT), 300));
-							bindNamed(Boolean.class, ServletInitOptions.EXECUTOR_ALLOW_CORE_THREAD_TIMEOUT, ParamUtils.asBoolean(context.getInitParameter(ServletInitOptions.EXECUTOR_ALLOW_CORE_THREAD_TIMEOUT), false));
+							bindNamed(String.class, ServletInitOptions.AWS_S3_BUCKET, awsS3Bucket);
+							bindNamed(String.class, ServletInitOptions.AWS_S3_BUCKET_ENDPOINT, ParamUtils.asString(p.getProperty(ServletInitOptions.AWS_S3_BUCKET_ENDPOINT), awsS3BucketEndpoint));
+							bindNamed(Boolean.class, ServletInitOptions.AWS_S3_PROXY, ParamUtils.asBoolean(p.getProperty(ServletInitOptions.AWS_S3_PROXY), false));
 
-							bindNamed(String.class, ServletInitOptions.MEMCACHED_CLUSTER, context.getInitParameter(ServletInitOptions.MEMCACHED_CLUSTER));
-							bindNamed(String.class, ServletInitOptions.MEMCACHED_CLUSTER_ID, context.getInitParameter(ServletInitOptions.MEMCACHED_CLUSTER_ID));
-							bindNamed(String.class, ServletInitOptions.MEMCACHED_CONNECTION_FACTORY, context.getInitParameter(ServletInitOptions.MEMCACHED_CONNECTION_FACTORY));
+							bindNamed(String.class, ServletInitOptions.AWS_SDB_DOMAIN_PREFIX, p.getProperty(ServletInitOptions.AWS_SDB_DOMAIN_PREFIX));
+
+							bindNamed(String.class, ServletInitOptions.AWS_SES_SENDER, p.getProperty(ServletInitOptions.AWS_SES_SENDER));
+
+							bindNamed(Integer.class, ServletInitOptions.EXECUTOR_CORE_POOL_SIZE, ParamUtils.asInteger(p.getProperty(ServletInitOptions.EXECUTOR_CORE_POOL_SIZE), 1));
+							bindNamed(Integer.class, ServletInitOptions.EXECUTOR_MAX_POOL_SIZE, ParamUtils.asInteger(p.getProperty(ServletInitOptions.EXECUTOR_MAX_POOL_SIZE), 4));
+							bindNamed(Integer.class, ServletInitOptions.EXECUTOR_KEEP_ALIVE_TIMEOUT, ParamUtils.asInteger(p.getProperty(ServletInitOptions.EXECUTOR_KEEP_ALIVE_TIMEOUT), 300));
+							bindNamed(Boolean.class, ServletInitOptions.EXECUTOR_ALLOW_CORE_THREAD_TIMEOUT, ParamUtils.asBoolean(p.getProperty(ServletInitOptions.EXECUTOR_ALLOW_CORE_THREAD_TIMEOUT), false));
+
+							bindNamed(String.class, ServletInitOptions.MEMCACHED_CLUSTER, p.getProperty(ServletInitOptions.MEMCACHED_CLUSTER));
+							bindNamed(String.class, ServletInitOptions.MEMCACHED_CLUSTER_ID, p.getProperty(ServletInitOptions.MEMCACHED_CLUSTER_ID));
+							bindNamed(String.class, ServletInitOptions.MEMCACHED_CONNECTION_FACTORY, p.getProperty(ServletInitOptions.MEMCACHED_CONNECTION_FACTORY));
 						}
 					}
 				);

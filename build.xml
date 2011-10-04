@@ -1,15 +1,8 @@
-<project name="browserhoard">
+<project name="BrowserHorde">
 	<property name="src.dir" value="src"/>
 
 	<property name="build.dir" value="build"/>
 	<property name="classes.dir" value="${build.dir}/classes"/>
-
-	<taskdef name="yuicompress" classname="com.yahoo.platform.yui.compressor.YUICompressTask">
-		<classpath>
-			<pathelement path="${basedir}/lib/yuicompressor-2.4.2.jar" />
-			<pathelement path="${basedir}/lib/YUIAnt.jar" />
-		</classpath>
-	</taskdef>
 
 	<target name="compile">
 		<mkdir dir="${classes.dir}"/>

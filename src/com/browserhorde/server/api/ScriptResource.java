@@ -34,8 +34,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.UriInfo;
+import javax.ws.rs.core.Response.ResponseBuilder;
 
-import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.commons.io.input.TeeInputStream;
 import org.apache.commons.io.output.TeeOutputStream;
 import org.apache.commons.lang3.StringUtils;
@@ -49,6 +49,7 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.api.consumes.ModifyScriptRequest;
@@ -76,13 +77,14 @@ public class ScriptResource {
 	private final Logger log = Logger.getLogger(getClass());
 
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET) private String awsS3Bucket;
+	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET_ENDPOINT) private String awsS3BucketEndpoint;
+	@Inject @Named(ServletInitOptions.AWS_S3_PROXY) private Boolean awsS3Proxy;
 
 	@Inject private EntityManager entityManager;
 	@Inject private ExecutorService executorService;
-	@Inject private FileItemFactory fileFactory;
 
 	@Inject private AmazonS3 awsS3;
-	
+
 	@GET
 	@RolesAllowed(Roles.REGISTERED)
 	public Response listScripts(@Context SecurityContext sec) {
@@ -166,15 +168,32 @@ public class ScriptResource {
 				gzip ? (mini ? FILE_MINIFIED_COMPRESSED : FILE_COMPRESSED) : (mini ? FILE_MINIFIED : FILE_ORIGINAL)
 			);
 
-		try {
-			// TODO: If we are using cloud front then we need to be able to change the domain
-			URI uriS3 = URIUtils.createURI("https", "s3.amazonaws.com", -1, awsS3Bucket + "/" + key, null, null);
-			return Response.status(ApiStatus.TEMPORARY_REDIRECT).location(uriS3).build();
+		ResponseBuilder responseBuilder;
+		if(awsS3Proxy) {
+			responseBuilder = Response.status(ApiStatus.OK);
+			S3Object object = awsS3.getObject(awsS3Bucket, key);
+			responseBuilder
+				.entity(object.getObjectContent())
+				;
+			if(gzip) {
+				responseBuilder.header("Content-Encoding", "gzip");
+			}
 		}
-		catch(URISyntaxException ex) {
-			log.error("Unable to create S3 URI", ex);
-			return Response.serverError().build();
+		else {
+			try {
+				responseBuilder = Response.status(ApiStatus.TEMPORARY_REDIRECT);
+				// TODO: If we are using cloud front then we need to be able to change the domain
+				URI uriS3 = URIUtils.createURI("http", awsS3BucketEndpoint, -1, key, null, null);
+				responseBuilder
+					.location(uriS3)
+					;
+			}
+			catch(URISyntaxException ex) {
+				throw new WebApplicationException(ex);
+			}
 		}
+
+		return responseBuilder.build();
 	}
 
 	// TODO: Refine file upload because multipart/form-data sucks
@@ -203,7 +222,7 @@ public class ScriptResource {
 
 		script.setOwner(user);
 		script.setName(modifyScript.name);
-		script.setDescription(modifyScript.desccription);
+		script.setDescription(modifyScript.description);
 		script.setDebug(modifyScript.debug);
 
 		entityManager.persist(script);
@@ -239,7 +258,7 @@ public class ScriptResource {
 
 		// TODO: This should perform some sort of patch instead of direct overwrite
 		script.setName(modifyScript.name);
-		script.setDescription(modifyScript.desccription);
+		script.setDescription(modifyScript.description);
 		script.setDebug(modifyScript.debug);
 
 		entityManager.merge(script);

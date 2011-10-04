@@ -1,4 +1,4 @@
-package com.browserhorde.server.util;
+package com.browserhorde.server.gson;
 
 import java.lang.reflect.Type;
 

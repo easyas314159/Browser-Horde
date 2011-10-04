@@ -16,16 +16,12 @@ public class WorkorderCheckout {
 	@Expose
 	private Task task;
 
-	@Expose
-	private JsonElement data;
-
 	public WorkorderCheckout() {
 	}
 	public WorkorderCheckout(String id, Date expires, Task task, JsonElement data) {
 		this.id = id;
 		this.expires = expires;
 		this.task = task;
-		this.data = data;
 	}
 
 	public String getId() {
@@ -36,8 +32,5 @@ public class WorkorderCheckout {
 	}
 	public Task getTask() {
 		return task;
-	}
-	public JsonElement getData() {
-		return data;
 	}
 }

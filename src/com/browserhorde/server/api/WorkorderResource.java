@@ -41,6 +41,7 @@ import com.browserhorde.server.entity.User;
 import com.browserhorde.server.gson.GsonTranscoder;
 import com.browserhorde.server.util.ParamUtils;
 import com.google.inject.Inject;
+import com.sun.jersey.api.NotFoundException;
 
 @Path("workorders")
 @Produces({MediaType.APPLICATION_JSON})
@@ -130,29 +131,37 @@ public class WorkorderResource {
 
 		WorkorderEntry entry = allWorkorders.get(checkin.getId());
 		if(entry == null) {
-			// TODO: return not found or something
+			throw new NotFoundException();
 		}
 		else {
 			Principal p = sec.getUserPrincipal();
 			String userId = (p == null) ? null : p.getName();
-			String jobId = checkin.getJob();
 			String taskId = checkin.getTask();
 
 			if(StringUtils.equalsIgnoreCase(userId, entry.userId)
 				&& StringUtils.equalsIgnoreCase(machineId, entry.machineId)
 				&& StringUtils.equalsIgnoreCase(taskId, entry.taskId)
 				) {
-				log.debug("Checkin success");
-				// All the parameters check out so this is probably the correct result
-				// TODO: Push job details to statistics queue
+
+				Task task = entityManager.find(Task.class, taskId);
+				if(task == null) {
+					// TODO: Bail early
+				}
+				else {
+					log.debug("Checkin success");
+
+					log.debug(checkin.getData());
+					// TODO: Pass off to data validation
+					// All the parameters check out so this is probably the correct result
+					// TODO: Push job details to statistics queue
+				}
 			}
 			else {
-				log.debug("Checkin failed");
-				// TODO: return failed or something
+				throw new NotFoundException();
 			}
 		}
 
-		throw new NotImplementedException();
+		return Response.status(ApiStatus.ACCEPTED).build();
 	}
 
 	@DELETE

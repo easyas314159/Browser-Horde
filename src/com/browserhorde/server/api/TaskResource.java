@@ -2,7 +2,10 @@ package com.browserhorde.server.api;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.UUID;
@@ -17,6 +20,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -24,20 +28,22 @@ import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.http.client.utils.URIUtils;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.S3Object;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.api.consumes.ModifyTaskRequest;
 import com.browserhorde.server.api.error.ForbiddenException;
 import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Task;
 import com.browserhorde.server.entity.User;
+import com.browserhorde.server.gson.GsonUtils;
 import com.browserhorde.server.security.Roles;
-import com.browserhorde.server.util.GsonUtils;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -46,9 +52,9 @@ import com.sun.jersey.api.NotFoundException;
 @Path("tasks")
 @Produces({MediaType.APPLICATION_JSON})
 public class TaskResource {
-	private static final String BASE_KEY = "tasks";
-
-	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET) private String S3_BUCKET;
+	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET) private String awsS3Bucket;
+	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET_ENDPOINT) private String awsS3BucketEndpoint;
+	@Inject @Named(ServletInitOptions.AWS_S3_PROXY) private Boolean awsS3Proxy;
 
 	@Inject private AmazonS3 awsS3;
 
@@ -76,6 +82,44 @@ public class TaskResource {
 			.entity(task)
 			.build()
 			;
+	}
+	
+	@GET
+	@Path("{id}/data")
+	public Response getTaskData(
+			@PathParam("id") String id
+		) {
+
+		Task task = entityManager.find(Task.class, id);
+		if(task == null) {
+			throw new NotFoundException();
+		}
+
+		String key = task.getAttachmentKey();
+		
+		if(awsS3Proxy) {
+			S3Object object = awsS3.getObject(awsS3Bucket, key);
+			Reader reader = new InputStreamReader(object.getObjectContent(), Charset.forName("UTF-8"));
+			JsonElement el = GsonUtils.newGson().fromJson(reader, JsonElement.class);
+
+			return Response
+				.status(ApiStatus.OK)
+				.entity(el)
+				.build()
+				;
+		}
+		else {
+			try {
+				URI uriS3 = URIUtils.createURI("http", awsS3BucketEndpoint, -1, key, null, null);
+				return Response
+					.status(ApiStatus.TEMPORARY_REDIRECT)
+					.location(uriS3)
+					.build()
+					;
+			} catch(URISyntaxException ex) {
+				throw new WebApplicationException(ex);
+			}
+		}
 	}
 
 	@POST
@@ -165,7 +209,7 @@ public class TaskResource {
 			throw new ForbiddenException();
 		}
 
-		String key = String.format("%s/%s/%s", BASE_KEY, task.getJob().getId(), task.getId());
+		String key = task.getAttachmentKey();
 
 		byte [] raw = GsonUtils.newGson().toJson(source).getBytes(Charset.forName("UTF-8"));
 		InputStream stream = new ByteArrayInputStream(raw);
@@ -174,15 +218,18 @@ public class TaskResource {
 		metadata.setLastModified(new Date());
 		metadata.setContentType("application/json; charset=utf-8");
 
-		PutObjectRequest putRequest = new PutObjectRequest(S3_BUCKET, key, stream, metadata);
+		PutObjectRequest putRequest = new PutObjectRequest(awsS3Bucket, key, stream, metadata);
 		PutObjectResult putResult = awsS3.putObject(putRequest);
 
-		awsS3.setObjectAcl(S3_BUCKET, key, CannedAccessControlList.PublicRead);
+		awsS3.setObjectAcl(awsS3Bucket, key, CannedAccessControlList.PublicRead);
 
 		// TODO: gzip data
 		// TODO: Increment billing
 
-		return Response.status(ApiStatus.ACCEPTED).build();
+		return Response
+			.status(ApiStatus.ACCEPTED)
+			.build()
+			;
 	}
 
 	@DELETE

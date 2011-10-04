@@ -10,11 +10,11 @@ import javax.servlet.ServletContextListener;
 
 import org.apache.log4j.Logger;
 
-import com.browserhorde.server.util.DateHandler;
-import com.browserhorde.server.util.GsonUtils;
-import com.browserhorde.server.util.JsonElementHandler;
-import com.browserhorde.server.util.URIHandler;
-import com.browserhorde.server.util.URLHandler;
+import com.browserhorde.server.gson.DateHandler;
+import com.browserhorde.server.gson.GsonUtils;
+import com.browserhorde.server.gson.JsonElementHandler;
+import com.browserhorde.server.gson.URIHandler;
+import com.browserhorde.server.gson.URLHandler;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.JsonElement;
 

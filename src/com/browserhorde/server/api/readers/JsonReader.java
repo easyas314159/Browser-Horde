@@ -13,7 +13,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyReader;
 
-import com.browserhorde.server.util.GsonUtils;
+import com.browserhorde.server.gson.GsonUtils;
 
 @Consumes({MediaType.APPLICATION_JSON})
 public class JsonReader<T> implements MessageBodyReader<T> {

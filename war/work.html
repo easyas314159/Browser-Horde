@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style type="text/css">
+			body {
+				font-family: sans-serif;
+			}
+			#job {
+				width: 384px;
+				padding: 15px 30px;
+				margin: 10px auto;
+				border-radius: 10px;
+				background: #333;
+				color: #eee;
+			}
+			#job span {
+				display: block;
+			}
+
+			.job_name {
+				font-style: bold;
+				font-size: 150%;
+			}
+			.job_status {
+				fond-size: 50%;
+			}
+			.job_description {
+				font-style: italic;
+			}
+			.job_website {
+				
+			}
+		</style>
+	</head>
+	<body>
+		<noscript>
+		</noscript>
+
+		<div>
+			<div id="job">
+				<span class="job_name">Job Name</span>
+				<span class="job_status">Job Status</span>
+				<span class="job_description">Job Description</span>
+				<a href="javascript:void(0);" class="job_website">Job Website</a>
+				<a href="javascript:void(0);" class="button">Pause</a>
+				<a href="javascript:void(0);" class="button">Cancel</a>
+			</div>
+		</div>
+
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+		<script type="text/javascript" src="messaging.js"></script>
+		<script type="text/javascript">
+			try {
+				window.domain = "browserhorde.net";
+			}
+			catch(err) {
+				console.log(err);
+			}
+
+			var w, wo;
+			var statusCodeHandlers = {
+				503: function(jqXHR, textStatus, errorThrown) {
+					var retryAfter = jqXHR.getResponseHeader("Retry-After");
+					if(retryAfter) {
+						// TODO: Parse Retry-After and then wait to retry
+					}
+					else {
+						console.error(textStatus);
+					}
+				},
+			};
+
+			function main() {
+				$("job").show();
+
+				w = new Worker("work.js");
+				w.onmessage = function(evt) {
+						dispatchMessages(evt.data, handleMessage);
+					};
+				w.onerror = handleError;
+
+				checkoutWorkorder();
+			}
+
+			function handleMessage(msg) {
+				if(msg) {
+					var f = handlers[msg.name];
+					if(f) {f(msg.value);}
+				}
+			}
+
+			var handlers = {};
+			handlers[MSG.SET_STATUS] = function(status) {
+					setStatus(status);
+				};
+			handlers[MSG.IS_RUNNING] = function(running) {
+					console.log(running);
+				};
+			handlers[MSG.FINISHED] = function(result) {
+					checkinWorkorder(result);
+				};
+			handlers[MSG.DEBUG] = function(value) {
+					console.log(value);
+				};
+			handlers[MSG.ERROR] = function(err) {
+					console.error(err);
+				};
+ 
+			function handleError(evt) {
+				console.log(evt);
+			}
+
+			function resumeProcessing() {
+				sendMessage(MSG.SET_RUNNING, true);
+			}
+			function pauseProcessing() {
+				sendMessage(MSG.SET_RUNNING, false);
+			}
+			function cancelProcessing() {
+				sendMessage(MSG.CANCEL);
+			}
+
+			function checkoutWorkorder() {
+				requestWorkorder(executeWorkorder);
+			}
+			function checkinWorkorder(data) {
+				submitWorkorder(data, checkoutWorkorder);
+			}
+			function setStatus(status) {
+				if(status instanceof String) {
+					$(".job_status").text(status);
+				}
+			}
+
+			function executeWorkorder(data, textStatus, jqXHR) {
+				var task = data.task;
+				var job = task.job;
+				var script = job.script;
+
+				$(".job_name").text(job.name);
+				setStatus("Retrieving Task Data");
+				$(".job_description").text(job.name);
+				$(".job_website").text(job.website);
+				$(".job_website").attr("href", job.website);
+
+				sendMessage(MSG.PRELOAD_SCRIPT, script.id);
+
+				wo = data;
+				requestTaskData(task.id, receiveTaskData);
+			}
+			function receiveTaskData(data, textStatus, jqXHR) {
+				wo.data = data;
+				sendMessage(MSG.SET_WORKORDER, wo);
+				sendMessage(MSG.SET_RUNNING, true);
+			}
+
+			$(main);
+
+			function pushMessage(name, value) {
+			}
+			function flushMessages() {
+			}
+			function sendMessage(name, value) {
+				flushMessages();
+				w.postMessage(createMessage(name, value));
+			}
+
+			function requestTaskData(id, callback) {
+				$.ajax({
+						type: 'GET',
+						dataType: 'json',
+						url: "tasks/" + id + "/data",
+						success: callback,
+						crossDomain: true,
+					});
+			}
+			function requestWorkorder(callback) {
+				$.ajax({
+						type: 'GET',
+						dataType: 'json',
+						url: "workorders",
+						statusCode: statusCodeHandlers,
+						success: callback,
+					});
+			}
+			function submitWorkorder(data, callback) {
+				$.ajax({
+						type: 'POST',
+						contentType: 'application/json',
+						dataType: 'json',
+						data: JSON.stringify(data),
+						url: 'workorders',
+						success: callback
+					});
+			}
+			
+		</script>
+	</body>
+</html>

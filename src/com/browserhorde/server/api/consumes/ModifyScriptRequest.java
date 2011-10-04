@@ -7,7 +7,7 @@ import com.google.gson.annotations.Expose;
 
 public class ModifyScriptRequest {
 	@Expose public String name;
-	@Expose public String desccription;
+	@Expose public String description;
 	@Expose public Boolean debug;
 
 	@Provider

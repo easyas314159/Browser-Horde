@@ -1,34 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" id="WebApp_ID" version="2.5">
   <display-name>BrowserHoard</display-name>
+
   <context-param>
-    <param-name>aws.access_key</param-name>
+    <param-name>HORDE_USER_AGENT</param-name>
+    <param-value>Browser Horde</param-value>
+  </context-param>
+
+  <!-- BEGIN -->
+  <context-param>
+    <param-name>AWS_ACCESS_KEY_ID</param-name>
     <param-value>AKIAJUJV4KC43J3DSNXA</param-value>
   </context-param>
   <context-param>
-    <param-name>aws.secret_key</param-name>
+    <param-name>AWS_SECRET_KEY</param-name>
     <param-value>7ucHXYnMk+lWsstJeZvactOwneLqgdxVVBbKhLHQ</param-value>
   </context-param>
   <context-param>
-    <param-name>aws.user_agent</param-name>
-    <param-value>Browser Horde</param-value>
-  </context-param>
-  <context-param>
-    <param-name>aws.s3.bucket</param-name>
+    <param-name>HORDE_AWS_S3_BUCKET</param-name>
     <param-value>com.browserhorde.dev</param-value>
   </context-param>
   <context-param>
-    <param-name>aws.simpledb.domain_prefix</param-name>
+    <param-name>HORDE_AWS_S3_PROXY</param-name>
+    <param-value>true</param-value>
+  </context-param>
+  <context-param>
+    <param-name>HORDE_AWS_SDB_DOMAIN_PREFIX</param-name>
     <param-value>com.browserhorde.dev</param-value>
   </context-param>
   <context-param>
-    <param-name>aws.ses.sender</param-name>
+    <param-name>HORDE_AWS_SES_SENDER</param-name>
     <param-value>no-reply@brainsinjars.com</param-value>
   </context-param>
   <context-param>
-    <param-name>memcached.cluster</param-name>
+    <param-name>HORDE_MEMCACHED_CLUSTER</param-name>
     <param-value>localhost:11211</param-value>
   </context-param>
+  <!-- END -->
+
   <listener>
     <listener-class>com.browserhorde.server.Configurator</listener-class>
   </listener>
@@ -38,17 +47,8 @@
   <listener>
     <listener-class>com.browserhorde.server.DependencyInjection</listener-class>
   </listener>
+
   <filter>
-    <display-name>ErrorTrap</display-name>
-    <filter-name>ErrorTrap</filter-name>
-    <filter-class>com.browserhorde.server.ErrorTrap</filter-class>
-  </filter>
-  <filter-mapping>
-    <filter-name>ErrorTrap</filter-name>
-    <url-pattern>/*</url-pattern>
-  </filter-mapping>
-  <filter>
-    <display-name>GuiceFilter</display-name>
     <filter-name>GuiceFilter</filter-name>
     <filter-class>com.browserhorde.server.IntermediateGuiceFilter</filter-class>
   </filter>

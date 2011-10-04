@@ -1,44 +1,39 @@
 package com.browserhorde.server.api.writers;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
-import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyWriter;
 import javax.ws.rs.ext.Provider;
 
-import com.browserhorde.server.gson.GsonUtils;
-import com.google.gson.Gson;
+import org.apache.commons.io.IOUtils;
 
 @Provider
-@Produces(MediaType.APPLICATION_JSON)
-public class JsonWriter implements MessageBodyWriter<Object> {
+public class InputStreamWriter implements MessageBodyWriter<InputStream> {
+
 	@Override
-	public long getSize(Object response, Class<?> clazz, Type type, Annotation[] a, MediaType mediaType) {
+	public long getSize(InputStream o, Class<?> clazz, Type type, Annotation[] a, MediaType mediaType) {
 		return -1;
 	}
 
 	@Override
 	public boolean isWriteable(Class<?> clazz, Type type, Annotation[] a, MediaType mediaType) {
-		return Object.class.isAssignableFrom(clazz);
+		return InputStream.class.isAssignableFrom(clazz);
 	}
 
 	@Override
-	public void writeTo(Object response, Class<?> clazz, Type type,
+	public void writeTo(InputStream input, Class<?> clazz, Type type,
 			Annotation[] a, MediaType mediaType,
 			MultivaluedMap<String, Object> headers, OutputStream output)
 			throws IOException, WebApplicationException {
 
-		Gson gson = GsonUtils.newGson();
-		OutputStreamWriter writer = new OutputStreamWriter(output, "UTF-8");
-		gson.toJson(response, type, writer);
-		writer.flush();
+		IOUtils.copy(input, output);
 	}
 
 }

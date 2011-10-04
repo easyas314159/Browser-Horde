@@ -24,7 +24,7 @@ import com.spaceprogram.simplejpa.cache.KittyCacheFactory;
 public class EntityManagerFactoryProvider implements Provider<EntityManagerFactory> {
 	private final Logger log = Logger.getLogger(getClass());
 
-	@Inject @Named(ServletInitOptions.AWS_SIMPLEDB_DOMAIN_PREFIX) private String awsDomainPrefix;
+	@Inject @Named(ServletInitOptions.AWS_SDB_DOMAIN_PREFIX) private String awsDomainPrefix;
 
 	@Inject private AmazonS3 awsS3;
 	@Inject private AmazonSimpleDB awsSDB;
