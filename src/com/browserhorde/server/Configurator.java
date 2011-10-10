@@ -21,6 +21,7 @@ import com.google.gson.JsonElement;
 public class Configurator implements ServletContextListener {
 	private final Logger log = Logger.getLogger(getClass());
 
+	@Override
 	public void contextInitialized(ServletContextEvent event) {
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
@@ -40,6 +41,7 @@ public class Configurator implements ServletContextListener {
 			log.fatal("BOOM!", t);
 		}
 	}
+	@Override
 	public void contextDestroyed(ServletContextEvent eventt) {
 	}
 }

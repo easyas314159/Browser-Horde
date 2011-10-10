@@ -1,17 +1,36 @@
 <project name="BrowserHorde">
 	<property name="src.dir" value="src"/>
+	<property name="war.dir" value="war"/>
+	
+	<property name="webinf.dir" value="${war.dir}/WEB-INF"/>
 
 	<property name="build.dir" value="build"/>
 	<property name="classes.dir" value="${build.dir}/classes"/>
 
 	<target name="compile">
 		<mkdir dir="${classes.dir}"/>
-		<javac srcdir="${src.dir}" destdir="${classes.dir}"/>
+		<javac srcdir="${src.dir}" destdir="${classes.dir}">
+			<classpath>
+				<fileset dir="${war.dir}/WEB-INF/lib"/>
+
+				<!-- The Java Servlet 2.5 Spec -->
+				<pathelement location="/Applications/eclipse/plugins/javax.servlet_2.5.0.v201103041518.jar"/>
+			</classpath>
+		</javac>
 	</target>
 
 	<target name="deploy" depends="compile">
-		<war destfile="${build.dir}/${ant.project.name}.war">
-			<fileset dir="war"/>
+		<copy file="${webinf.dir}/web.xml" todir="${build.dir}" overwrite="true">
+			<filterchain>
+				<striplinebreaks/>
+				<tokenfilter>
+				      <filetokenizer/>
+				      <replaceregex pattern="BEGIN(.*)END" flags="gm" replace=""/>
+				</tokenfilter>
+			</filterchain>
+		</copy>		
+		<war webxml="${build.dir}/web.xml" destfile="${build.dir}/${ant.project.name}.war">
+			<fileset dir="${war.dir}"/>
 			<classes dir="${classes.dir}"/>
 		</war>
 	</target>

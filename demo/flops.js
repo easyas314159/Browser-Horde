@@ -56,8 +56,7 @@ function estimate_flops() {
 	var loops = 15625;
 
 	var TLimit = 15.0;
-	//var TLimit = 3.0;
-	var NLimit = 512000000;
+	var NLimit = 256000000;
 
 	var piref = 3.14159265358979324;
 	var one = 1.0;

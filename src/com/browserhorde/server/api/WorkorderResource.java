@@ -25,7 +25,6 @@ import javax.ws.rs.core.SecurityContext;
 import net.spy.memcached.MemcachedClient;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 

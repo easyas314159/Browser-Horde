@@ -1,3 +1,6 @@
+//var apiPath = "http://localhost:8080/BrowserHorde";
+var apiPath = "http://api.browserhorde.net";
+
 MSG = {
 		PRELOAD_SCRIPT: "preload_script",
 		PRELOAD_COMPLETE: "preload_complete",

@@ -28,6 +28,7 @@ import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
 import com.amazonaws.services.sns.AmazonSNS;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSAsync;
+import com.browserhorde.server.cors.PreflightHijackFilter;
 import com.browserhorde.server.inject.AmazonCredentialsProvider;
 import com.browserhorde.server.inject.AmazonElastiCacheAsyncProvider;
 import com.browserhorde.server.inject.AmazonElastiCacheProvider;
@@ -59,9 +60,18 @@ import com.sun.jersey.api.container.filter.RolesAllowedResourceFilterFactory;
 import com.sun.jersey.api.core.PackagesResourceConfig;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
+import com.thetransactioncompany.cors.CORSFilter;
 
 public class DependencyInjection extends GuiceServletContextListener {
 	private Logger log = Logger.getLogger(getClass());
+	
+	private static final String CORS_ALLOW_GENERIC_HTTP_REQUESTS = "cors.allowGenericHttpRequests";
+	private static final String CORS_ALLOW_ORIGIN = "cors.allowOrigin";
+	private static final String CORS_SUPPORTED_METHODS = "cors.supportedMethods";
+	private static final String CORS_SUPPORTED_HEADERS = "cors.supportedHeaders";
+	private static final String CORS_EXPOSED_HEADERS = "cors.exposedHeaders";
+	private static final String CORS_SUPPORTS_CREDENTIALS = "cors.supportsCredentials";
+	private static final String CORS_MAX_AGE = "cors.maxAge";
 
 	@Override
 	public void contextInitialized(ServletContextEvent servletContextEvent) {
@@ -175,10 +185,20 @@ public class DependencyInjection extends GuiceServletContextListener {
 								.in(Singleton.class);
 						}
 						
-						private void bindFilters() {						
+						private void bindFilters() {
 							// FIXME: Rate limiter is currently broken
+							Map<String, String> corsSettings = new HashMap<String, String>();
+
+							corsSettings.put(CORS_SUPPORTED_METHODS, "GET,POST,PUT,DELETE,OPTIONS");
+							corsSettings.put(CORS_SUPPORTED_HEADERS, "Origin,Content-Type,Allow,Accept,X-Horde-Machine-Id");
+							corsSettings.put(CORS_EXPOSED_HEADERS, "Content-Type,Retry-After,X-Horde-Machine-Id,X-RateLimit,X-RateLimit-Remaining,X-RateLimit-Reset");
+
 							filter("/*").through(XRuntime.class);
 							//filter("/*").through(XRateLimitFilter.class);
+
+							filter("/*").through(new CORSFilter(), corsSettings);
+							filter("/*").through(new PreflightHijackFilter());
+
 							filter("/*").through(AuthenticationFilter.class);
 							filter("/workorders/*").through(XMachineIdFilter.class);
 						}
@@ -194,14 +214,16 @@ public class DependencyInjection extends GuiceServletContextListener {
 								builder.toInstance(value);
 							}
 						}
-
+						
 						private void bindServletInitOptions() {
 							Properties p = new Properties();
 							ServletContext ctx = getServletContext();
 							Enumeration<String> params = ctx.getInitParameterNames();
 							while(params.hasMoreElements()) {
-								String param = params.nextElement();
-								p.setProperty(param, ctx.getInitParameter(param));
+								String key = params.nextElement();
+								String value = ctx.getInitParameter(key);
+
+								p.setProperty(key, value);
 							}
 
 							p = new Properties(p);
@@ -222,11 +244,6 @@ public class DependencyInjection extends GuiceServletContextListener {
 							bindNamed(String.class, ServletInitOptions.AWS_SDB_DOMAIN_PREFIX, p.getProperty(ServletInitOptions.AWS_SDB_DOMAIN_PREFIX));
 
 							bindNamed(String.class, ServletInitOptions.AWS_SES_SENDER, p.getProperty(ServletInitOptions.AWS_SES_SENDER));
-
-							bindNamed(Integer.class, ServletInitOptions.EXECUTOR_CORE_POOL_SIZE, ParamUtils.asInteger(p.getProperty(ServletInitOptions.EXECUTOR_CORE_POOL_SIZE), 1));
-							bindNamed(Integer.class, ServletInitOptions.EXECUTOR_MAX_POOL_SIZE, ParamUtils.asInteger(p.getProperty(ServletInitOptions.EXECUTOR_MAX_POOL_SIZE), 4));
-							bindNamed(Integer.class, ServletInitOptions.EXECUTOR_KEEP_ALIVE_TIMEOUT, ParamUtils.asInteger(p.getProperty(ServletInitOptions.EXECUTOR_KEEP_ALIVE_TIMEOUT), 300));
-							bindNamed(Boolean.class, ServletInitOptions.EXECUTOR_ALLOW_CORE_THREAD_TIMEOUT, ParamUtils.asBoolean(p.getProperty(ServletInitOptions.EXECUTOR_ALLOW_CORE_THREAD_TIMEOUT), false));
 
 							bindNamed(String.class, ServletInitOptions.MEMCACHED_CLUSTER, p.getProperty(ServletInitOptions.MEMCACHED_CLUSTER));
 							bindNamed(String.class, ServletInitOptions.MEMCACHED_CLUSTER_ID, p.getProperty(ServletInitOptions.MEMCACHED_CLUSTER_ID));

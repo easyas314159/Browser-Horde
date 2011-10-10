@@ -20,6 +20,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -87,7 +88,8 @@ public class TaskResource {
 	@GET
 	@Path("{id}/data")
 	public Response getTaskData(
-			@PathParam("id") String id
+			@PathParam("id") String id,
+			@QueryParam("jsonp") String jsonp
 		) {
 
 		Task task = entityManager.find(Task.class, id);
@@ -96,7 +98,7 @@ public class TaskResource {
 		}
 
 		String key = task.getAttachmentKey();
-		
+
 		if(awsS3Proxy) {
 			S3Object object = awsS3.getObject(awsS3Bucket, key);
 			Reader reader = new InputStreamReader(object.getObjectContent(), Charset.forName("UTF-8"));
@@ -113,6 +115,7 @@ public class TaskResource {
 				URI uriS3 = URIUtils.createURI("http", awsS3BucketEndpoint, -1, key, null, null);
 				return Response
 					.status(ApiStatus.TEMPORARY_REDIRECT)
+					.header("Content-Type", "application/json; charset=utf-8")
 					.location(uriS3)
 					.build()
 					;

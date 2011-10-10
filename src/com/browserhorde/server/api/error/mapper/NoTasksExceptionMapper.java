@@ -6,6 +6,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
+import com.browserhorde.server.api.ApiStatus;
 import com.browserhorde.server.api.error.NoTasksException;
 
 @Provider
@@ -13,7 +14,9 @@ import com.browserhorde.server.api.error.NoTasksException;
 public final class NoTasksExceptionMapper implements ExceptionMapper<NoTasksException> {
 	@Override
 	public Response toResponse(NoTasksException ex) {
-		// TODO: This needs some meaningful body content
-		return Response.ok().build();
+		return Response
+			.status(ApiStatus.NO_CONTENT)
+			.build()
+			;
 	}
 }

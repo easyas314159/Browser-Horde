@@ -13,18 +13,15 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
+import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
-import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
 
 import com.browserhorde.server.entity.User;
 
 @Path("")
 public class RootResource {
-	private final Logger log = Logger.getLogger(getClass());
-
 	@GET
 	public Response serviceDiscovery(
 			@Context SecurityContext sec,
@@ -36,23 +33,34 @@ public class RootResource {
 		if(user == null) {
 		}
 		else {
+			links.add(link(
+					UriBuilder.fromPath("/").path(JobResource.class).build(),
+					"jobs", null, null, null, null
+				));
+			links.add(link(
+					UriBuilder.fromPath("/").path(ScriptResource.class).build(),
+					"scripts", null, null, null, null
+				));
+			links.add(link(
+					UriBuilder.fromPath("/").path(UserResource.class).build(),
+					"user", null, null, null, null
+				));
 		}
 
 		links.add(link(
-				ui.getBaseUriBuilder().path(BenchmarkResource.class).build(),
+				UriBuilder.fromPath("/").path(BenchmarkResource.class).build(),
 				"benchmarks", null, null, null, null
 			));
 		links.add(link(
-				ui.getBaseUriBuilder().path(WorkorderResource.class).build(),
+				UriBuilder.fromPath("/").path(WorkorderResource.class).build(),
 				"workorders", null, null, null, null
 			));
 
-		ResponseBuilder responseBuilder = Response.status(ApiStatus.OK);
-		for(String link : links) {
-			responseBuilder.header("Link", link);
-		}
-
-		return responseBuilder.build();
+		return Response
+			.status(ApiStatus.OK)
+			.header(ApiHeaders.LINK, StringUtils.join(links, ','))
+			.build()
+			;
 	}
 
 	private String link(URI uri, String rel, String rev, String title, URI anchor, Map<String, String> extensions) {

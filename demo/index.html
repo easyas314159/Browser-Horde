@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style type="text/css">
+			body {
+				font-family: sans-serif;
+			}
+			#container {
+				width: 512px;
+				margin: 10px auto;
+			}
+			#job {
+				margin: 10px auto;
+				padding: 15px 30px;
+				border-radius: 10px;
+				background: #333;
+				color: #eee;
+			}
+			#job span {
+				display: block;
+			}
+
+			.job_name {
+				font-weight: bold;
+				font-size: 150%;
+			}
+			.job_status {
+				font-size: 50%;
+			}
+			.job_description {
+				font-style: italic;
+			}
+			.job_website {
+				
+			}
+			
+			.invisible {
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+
+		<div id="container">
+			<noscript>
+				<div>
+					<h1>Uh Oh!</h1>
+					You need to make sure javascript is enabled to volunteer computer resources.
+				</div>
+			</noscript>
+			<div id="congrats" class="invisible">
+				<h1>Congratulations!</h1>
+				You are now volunteering your spare computing resources. Just leave this page open and we will do the rest. 
+			</div>
+			<div id="nowork" class="invisible">
+				<h1>Break Time!</h1>
+				It doesn't look like there is any more work to be done. We're going to take a short rest and try back later.
+			</div>
+			<div id="upgrade" class="invisible">
+				<h1>Uh Oh!</h1>
+				It appears your web browser doesn't currently support the necessary features required to volunteer computing resources.
+				<ul>
+					<li><a href="http://www.google.com/chrome">Chrome</a></li>
+					<li><a href="http://www.getfirefox.com">Firefox</a></li>
+					<li><a href="http://www.apple.com/safari/">Safari</a></li>
+				</ul>
+			</div>
+			<div id="job" class="invisible">
+				<span class="job_name">Job Name</span>
+				<span class="job_status">Job Status</span>
+				<span class="job_description">Job Description</span>
+				<a href="javascript:void(0);" class="job_website">Job Website</a>
+				<a href="javascript:resumeProcessing();" class="button">Pause</a>
+				<a href="javascript:pauseProcessing();" class="button">Cancel</a>
+			</div>
+		</div>
+
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+		<script type="text/javascript" src="analytics.js"></script>
+		<script type="text/javascript" src="messaging.js"></script>
+		<script type="text/javascript" src="horde.js"></script>
+		<script type="text/javascript" src="main.js"></script>
+		<script type="text/javascript">
+			$(main);
+		</script>
+	</body>
+</html>

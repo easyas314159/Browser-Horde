@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" id="WebApp_ID" version="2.5">
   <display-name>BrowserHoard</display-name>
-
   <context-param>
     <param-name>HORDE_USER_AGENT</param-name>
-    <param-value>Browser Horde</param-value>
+    <param-value>Browser Horde (browserhorde.net)</param-value>
   </context-param>
-
   <!-- BEGIN -->
   <context-param>
     <param-name>AWS_ACCESS_KEY_ID</param-name>
@@ -18,7 +16,7 @@
   </context-param>
   <context-param>
     <param-name>HORDE_AWS_S3_BUCKET</param-name>
-    <param-value>com.browserhorde.dev</param-value>
+    <param-value>dev.data.browserhorde.net</param-value>
   </context-param>
   <context-param>
     <param-name>HORDE_AWS_S3_PROXY</param-name>
@@ -26,7 +24,7 @@
   </context-param>
   <context-param>
     <param-name>HORDE_AWS_SDB_DOMAIN_PREFIX</param-name>
-    <param-value>com.browserhorde.dev</param-value>
+    <param-value>dev.browserhorde.net</param-value>
   </context-param>
   <context-param>
     <param-name>HORDE_AWS_SES_SENDER</param-name>
@@ -37,9 +35,11 @@
     <param-value>localhost:11211</param-value>
   </context-param>
   <!-- END -->
-
   <listener>
     <listener-class>com.browserhorde.server.Configurator</listener-class>
+  </listener>
+  <listener>
+    <listener-class>com.browserhorde.server.ExecutorServiceListener</listener-class>
   </listener>
   <listener>
     <listener-class>org.apache.commons.fileupload.servlet.FileCleanerCleanup</listener-class>
@@ -47,7 +47,6 @@
   <listener>
     <listener-class>com.browserhorde.server.DependencyInjection</listener-class>
   </listener>
-
   <filter>
     <filter-name>GuiceFilter</filter-name>
     <filter-class>com.browserhorde.server.IntermediateGuiceFilter</filter-class>

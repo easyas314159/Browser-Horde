@@ -2,19 +2,9 @@ package com.browserhorde.server.api;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.Reader;
-import java.io.Writer;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.zip.GZIPOutputStream;
 
 import javax.annotation.security.RolesAllowed;
 import javax.persistence.EntityManager;
@@ -34,10 +24,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.UriInfo;
-import javax.ws.rs.core.Response.ResponseBuilder;
 
-import org.apache.commons.io.input.TeeInputStream;
-import org.apache.commons.io.output.TeeOutputStream;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIUtils;
 import org.apache.log4j.Logger;
@@ -47,22 +34,17 @@ import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.api.consumes.ModifyScriptRequest;
 import com.browserhorde.server.api.error.ForbiddenException;
-import com.browserhorde.server.aws.AmazonS3AsyncPutObject;
 import com.browserhorde.server.entity.Script;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.security.Roles;
-import com.browserhorde.server.util.ConcurrentPipeStream;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.sun.jersey.api.NotFoundException;
-import com.yahoo.platform.yui.compressor.JavaScriptCompressor;
 
 @Path("scripts")
 @Produces({MediaType.APPLICATION_JSON})
@@ -133,6 +115,7 @@ public class ScriptResource {
 			throw new NotFoundException();
 		}
 
+		/*
 		Set<String> acceptedEncodings = new HashSet<String>();
 		List<String> acceptHeaders = headers.getRequestHeader(HttpHeaders.ACCEPT_ENCODING);
 		if(acceptHeaders != null) {
@@ -167,33 +150,37 @@ public class ScriptResource {
 				script.getId(),
 				gzip ? (mini ? FILE_MINIFIED_COMPRESSED : FILE_COMPRESSED) : (mini ? FILE_MINIFIED : FILE_ORIGINAL)
 			);
+		*/
 
-		ResponseBuilder responseBuilder;
+		String key = getObjectKey(
+				script.getId(),
+				FILE_ORIGINAL
+			);
+
 		if(awsS3Proxy) {
-			responseBuilder = Response.status(ApiStatus.OK);
 			S3Object object = awsS3.getObject(awsS3Bucket, key);
-			responseBuilder
+
+			return Response
+				.status(ApiStatus.OK)
+				.contentLocation(null)
 				.entity(object.getObjectContent())
+				.build()
 				;
-			if(gzip) {
-				responseBuilder.header("Content-Encoding", "gzip");
-			}
 		}
 		else {
 			try {
-				responseBuilder = Response.status(ApiStatus.TEMPORARY_REDIRECT);
-				// TODO: If we are using cloud front then we need to be able to change the domain
 				URI uriS3 = URIUtils.createURI("http", awsS3BucketEndpoint, -1, key, null, null);
-				responseBuilder
+				return Response
+					.status(ApiStatus.TEMPORARY_REDIRECT)
+					.header("Content-Type", "application/javascript; charset=utf-8")
 					.location(uriS3)
+					.build()
 					;
 			}
 			catch(URISyntaxException ex) {
 				throw new WebApplicationException(ex);
 			}
 		}
-
-		return responseBuilder.build();
 	}
 
 	// TODO: Refine file upload because multipart/form-data sucks
@@ -332,6 +319,7 @@ public class ScriptResource {
 		String prefix = String.format("scripts/%s", id);
 
 		final String keyOrig = String.format("%s/%s", prefix, FILE_ORIGINAL);
+		/*
 		final String keyMini = String.format("%s/%s", prefix, FILE_MINIFIED);
 		final String keyComp = String.format("%s/%s", prefix, FILE_COMPRESSED);
 		final String keyCompMini = String.format("%s/%s", prefix, FILE_MINIFIED_COMPRESSED);
@@ -348,11 +336,16 @@ public class ScriptResource {
 		final TeeOutputStream teeBranch = new TeeOutputStream(gzipOrig, pipeOrig.getOutputStream());
 		final TeeInputStream teeOrig = new TeeInputStream(source, teeBranch, true);
 		final TeeInputStream teeMini = new TeeInputStream(pipeMini.getInputStream(), gzipMini, true);
+		*/
 
 		final ObjectMetadata metaRaw = new ObjectMetadata();
-		final ObjectMetadata metaComp = new ObjectMetadata();
-
 		metaRaw.setContentType("text/javascript");
+		
+		awsS3.putObject(bucket, keyOrig, source, metaRaw);
+		awsS3.setObjectAcl(bucket, keyOrig, CannedAccessControlList.PublicRead);
+
+		/*
+		final ObjectMetadata metaComp = new ObjectMetadata();
 		metaComp.setContentType("text/javascript");
 		metaComp.setContentEncoding("gzip");
 
@@ -383,6 +376,7 @@ public class ScriptResource {
 		Future<PutObjectResult> fMiniComp = executorService.submit(new AmazonS3AsyncPutObject(
 				awsS3, new PutObjectRequest(bucket, keyCompMini, pipeCompMini.getInputStream(), metaComp), CannedAccessControlList.PublicRead
 			));
+		*/
 	}
 
 	private String getObjectKey(String id, String file) {
