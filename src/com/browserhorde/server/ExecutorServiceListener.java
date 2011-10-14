@@ -13,7 +13,7 @@ import org.apache.log4j.Logger;
 import com.browserhorde.server.util.ParamUtils;
 
 public class ExecutorServiceListener implements ServletContextListener {
-	public static final String ATTRIBUTE = "executor";
+	public static final String EXECUTOR_NAME = ExecutorService.class.getName();
 
 	private final Logger log = Logger.getLogger(getClass());
 
@@ -57,13 +57,13 @@ public class ExecutorServiceListener implements ServletContextListener {
 		// TODO: Allow custom thread factory configuration
 		//executor.setThreadFactory(threadFactory);
 
-		ctx.setAttribute(ATTRIBUTE, executor);
+		ctx.setAttribute(EXECUTOR_NAME, executor);
     }
     @Override
 	public void contextDestroyed(ServletContextEvent evt) {
     	ServletContext ctx = evt.getServletContext();
-    	ExecutorService executor = (ExecutorService)ctx.getAttribute(ATTRIBUTE);
-    	ctx.setAttribute(ATTRIBUTE, null);
+    	ExecutorService executor = (ExecutorService)ctx.getAttribute(EXECUTOR_NAME);
+    	ctx.setAttribute(EXECUTOR_NAME, null);
 
     	try {
     		executor.shutdown();

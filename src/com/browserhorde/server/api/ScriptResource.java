@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.concurrent.ExecutorService;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import javax.annotation.security.RolesAllowed;
 import javax.persistence.EntityManager;
@@ -25,7 +27,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIUtils;
 import org.apache.log4j.Logger;
 
@@ -34,14 +35,22 @@ import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.sqs.AmazonSQSAsync;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.api.consumes.ModifyScriptRequest;
 import com.browserhorde.server.api.error.ForbiddenException;
 import com.browserhorde.server.entity.Script;
 import com.browserhorde.server.entity.User;
+import com.browserhorde.server.gson.GsonUtils;
+import com.browserhorde.server.inject.QueueGZIP;
+import com.browserhorde.server.inject.QueueMinify;
+import com.browserhorde.server.queue.ProcessObject;
 import com.browserhorde.server.security.Roles;
+import com.google.gson.Gson;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.sun.jersey.api.NotFoundException;
@@ -49,24 +58,25 @@ import com.sun.jersey.api.NotFoundException;
 @Path("scripts")
 @Produces({MediaType.APPLICATION_JSON})
 public class ScriptResource {
-	private static final String BASE_PATH = "scripts";
-
-	private static final String FILE_ORIGINAL = ".js";
-	private static final String FILE_MINIFIED = "min.js";
-	private static final String FILE_COMPRESSED = ".js.gz";
-	private static final String FILE_MINIFIED_COMPRESSED = "min.js.gz";
-
 	private final Logger log = Logger.getLogger(getClass());
 
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET) private String awsS3Bucket;
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET_ENDPOINT) private String awsS3BucketEndpoint;
-	@Inject @Named(ServletInitOptions.AWS_S3_PROXY) private Boolean awsS3Proxy;
+
+	private final String awsSqsGzip;
+	private final String awsSqsMinify;
 
 	@Inject private EntityManager entityManager;
-	@Inject private ExecutorService executorService;
 
 	@Inject private AmazonS3 awsS3;
+	@Inject private AmazonSQSAsync awsSQS;
 
+	@Inject
+	public ScriptResource(@QueueGZIP String gzipQueue, @QueueMinify String minQueue) {
+		this.awsSqsGzip = gzipQueue;
+		this.awsSqsMinify = minQueue;
+	}
+	
 	@GET
 	@RolesAllowed(Roles.REGISTERED)
 	public Response listScripts(@Context SecurityContext sec) {
@@ -115,7 +125,6 @@ public class ScriptResource {
 			throw new NotFoundException();
 		}
 
-		/*
 		Set<String> acceptedEncodings = new HashSet<String>();
 		List<String> acceptHeaders = headers.getRequestHeader(HttpHeaders.ACCEPT_ENCODING);
 		if(acceptHeaders != null) {
@@ -143,43 +152,24 @@ public class ScriptResource {
 			}
 		}
 
-		boolean mini = !script.isDebug();
-		boolean gzip = acceptedEncodings.contains("gzip");
+		String key = script.getId();
+		if(!script.isDebug()) {
+			key += ".min";
+		}
+		if(acceptedEncodings.contains("gzip")) {
+			key += ".gz";
+		}
 
-		String key = getObjectKey(
-				script.getId(),
-				gzip ? (mini ? FILE_MINIFIED_COMPRESSED : FILE_COMPRESSED) : (mini ? FILE_MINIFIED : FILE_ORIGINAL)
-			);
-		*/
-
-		String key = getObjectKey(
-				script.getId(),
-				FILE_ORIGINAL
-			);
-
-		if(awsS3Proxy) {
-			S3Object object = awsS3.getObject(awsS3Bucket, key);
-
+		try {
+			URI uriS3 = URIUtils.createURI("http", awsS3BucketEndpoint, -1, key, null, null);
 			return Response
-				.status(ApiStatus.OK)
-				.contentLocation(null)
-				.entity(object.getObjectContent())
+				.status(ApiStatus.FOUND)
+				.location(uriS3)
 				.build()
 				;
 		}
-		else {
-			try {
-				URI uriS3 = URIUtils.createURI("http", awsS3BucketEndpoint, -1, key, null, null);
-				return Response
-					.status(ApiStatus.TEMPORARY_REDIRECT)
-					.header("Content-Type", "application/javascript; charset=utf-8")
-					.location(uriS3)
-					.build()
-					;
-			}
-			catch(URISyntaxException ex) {
-				throw new WebApplicationException(ex);
-			}
+		catch(URISyntaxException ex) {
+			throw new WebApplicationException(ex);
 		}
 	}
 
@@ -295,7 +285,7 @@ public class ScriptResource {
 
 			ListObjectsRequest listObjects = new ListObjectsRequest()
 				.withBucketName(awsS3Bucket)
-				.withPrefix(getObjectKey(script.getId(), null));
+				.withPrefix(script.getId());
 			while(true) {
 				ObjectListing listing = awsS3.listObjects(listObjects);
 
@@ -316,10 +306,29 @@ public class ScriptResource {
 	}
 
 	private void storeScript(InputStream source, String bucket, String id) throws IOException {
+		ObjectMetadata metadata = new ObjectMetadata();
+		metadata.setContentType("application/javascript; charset=utf-8");
+
+		PutObjectRequest putRequest = new PutObjectRequest(bucket, id, source, metadata); 
+
+		PutObjectResult putResult = awsS3.putObject(putRequest);
+		awsS3.setObjectAcl(bucket, id, CannedAccessControlList.PublicRead);
+
+		SendMessageRequest sendMsgRequest;
+		Gson gson = GsonUtils.newGson();
+
+		ProcessObject gz = new ProcessObject(bucket, id);
+		awsSQS.sendMessageAsync(new SendMessageRequest(awsSqsGzip, gson.toJson(gz)));
+
+		ProcessObject min = new ProcessObject(bucket, id);
+		awsSQS.sendMessageAsync(new SendMessageRequest(awsSqsMinify, gson.toJson(min)));
+
+		//awsSQS.sendMessageAsync(arg0)
+
+		/*
 		String prefix = String.format("scripts/%s", id);
 
 		final String keyOrig = String.format("%s/%s", prefix, FILE_ORIGINAL);
-		/*
 		final String keyMini = String.format("%s/%s", prefix, FILE_MINIFIED);
 		final String keyComp = String.format("%s/%s", prefix, FILE_COMPRESSED);
 		final String keyCompMini = String.format("%s/%s", prefix, FILE_MINIFIED_COMPRESSED);
@@ -336,17 +345,15 @@ public class ScriptResource {
 		final TeeOutputStream teeBranch = new TeeOutputStream(gzipOrig, pipeOrig.getOutputStream());
 		final TeeInputStream teeOrig = new TeeInputStream(source, teeBranch, true);
 		final TeeInputStream teeMini = new TeeInputStream(pipeMini.getInputStream(), gzipMini, true);
-		*/
 
 		final ObjectMetadata metaRaw = new ObjectMetadata();
-		metaRaw.setContentType("text/javascript");
-		
+		metaRaw.setContentType("application/javascript");
+
 		awsS3.putObject(bucket, keyOrig, source, metaRaw);
 		awsS3.setObjectAcl(bucket, keyOrig, CannedAccessControlList.PublicRead);
 
-		/*
 		final ObjectMetadata metaComp = new ObjectMetadata();
-		metaComp.setContentType("text/javascript");
+		metaComp.setContentType("application/javascript");
 		metaComp.setContentEncoding("gzip");
 
 		// Perform crazy async file upload
@@ -376,10 +383,16 @@ public class ScriptResource {
 		Future<PutObjectResult> fMiniComp = executorService.submit(new AmazonS3AsyncPutObject(
 				awsS3, new PutObjectRequest(bucket, keyCompMini, pipeCompMini.getInputStream(), metaComp), CannedAccessControlList.PublicRead
 			));
-		*/
-	}
 
-	private String getObjectKey(String id, String file) {
-		return String.format("%s/%s/%s", BASE_PATH, id, file == null ? StringUtils.EMPTY : file);
+		try {
+			PutObjectResult result = fOrig.get();
+		}
+		catch(InterruptedException e) {
+			throw new WebApplicationException(e);
+		}
+		catch(ExecutionException e) {
+			throw new WebApplicationException(e);
+		}
+		*/
 	}
 }

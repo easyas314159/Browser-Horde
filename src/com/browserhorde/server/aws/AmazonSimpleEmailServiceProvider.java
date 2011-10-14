@@ -1,4 +1,4 @@
-package com.browserhorde.server.inject;
+package com.browserhorde.server.aws;
 
 import java.util.concurrent.ExecutorService;
 

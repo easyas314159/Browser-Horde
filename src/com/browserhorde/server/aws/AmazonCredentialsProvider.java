@@ -1,4 +1,4 @@
-package com.browserhorde.server.inject;
+package com.browserhorde.server.aws;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;

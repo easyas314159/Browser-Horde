@@ -1,4 +1,4 @@
-package com.browserhorde.server.inject;
+package com.browserhorde.server.aws;
 
 import java.util.concurrent.ExecutorService;
 
@@ -16,8 +16,6 @@ public class AmazonSimpleDBAsyncProvider implements Provider<AmazonSimpleDBAsync
 
 	@Override
 	public AmazonSimpleDBAsync get() {
-		AmazonSimpleDBAsync sdb = new  AmazonSimpleDBAsyncClient(awsCredentials, awsClientConfig, executorService);
-
-		return sdb;
+		return new  AmazonSimpleDBAsyncClient(awsCredentials, awsClientConfig, executorService);
 	}
 }

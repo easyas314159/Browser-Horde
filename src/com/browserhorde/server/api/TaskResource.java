@@ -114,7 +114,7 @@ public class TaskResource {
 			try {
 				URI uriS3 = URIUtils.createURI("http", awsS3BucketEndpoint, -1, key, null, null);
 				return Response
-					.status(ApiStatus.TEMPORARY_REDIRECT)
+					.status(ApiStatus.FOUND)
 					.header("Content-Type", "application/json; charset=utf-8")
 					.location(uriS3)
 					.build()
@@ -220,6 +220,8 @@ public class TaskResource {
 		ObjectMetadata metadata = new ObjectMetadata();
 		metadata.setLastModified(new Date());
 		metadata.setContentType("application/json; charset=utf-8");
+		metadata.addUserMetadata("Access-Control-Allow-Origin", "*");
+		metadata.addUserMetadata("Access-Control-Allow-Methods", "GET");
 
 		PutObjectRequest putRequest = new PutObjectRequest(awsS3Bucket, key, stream, metadata);
 		PutObjectResult putResult = awsS3.putObject(putRequest);

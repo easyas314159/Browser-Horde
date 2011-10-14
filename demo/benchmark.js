@@ -10,17 +10,14 @@ $.setup = function(data) {
 	this.result = [];
 };
 $.iterate = function() {
-	if(this.idx < 3) {
-		$.status("Module " + this.idx);
+	if(this.idx < modules.length) {
+		$.status("Module " + (this.idx + 1));
 		modules[this.idx].call(this);
 		this.idx++;
 	}
 	else {
-		return true;
+		return this.result;
 	}
-};
-$.finish = function() {
-	return this.result;
 };
 
 var A0 = 1.0;
@@ -108,13 +105,13 @@ var modules = [
 			t: sa - this.nulltime
 		});
 	},
-	function(s) {},
-	function(s) {},
-	function(s) {},
-	function(s) {},
-	function(s) {},
-	function(s) {},
-	function(s) {}
+	function() {},
+	function() {},
+	function() {},
+	function() {},
+	function() {},
+	function() {},
+	function() {}
 ];
 
 function timer(p) {

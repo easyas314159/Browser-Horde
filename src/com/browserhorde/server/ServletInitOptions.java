@@ -11,7 +11,6 @@ public final class ServletInitOptions {
 
 	// Memcached
 	public static final String MEMCACHED_CLUSTER = "HORDE_MEMCACHED_CLUSTER";
-	public static final String MEMCACHED_CLUSTER_ID = "HORDE_MEMCACHED_CLUSTER_ID";
 	public static final String MEMCACHED_CONNECTION_FACTORY = "HORDE_MEMCACHED_CONNECTION_FACTORY";
 
 	// Amazon Web Services - General
@@ -30,4 +29,7 @@ public final class ServletInitOptions {
 
 	// Amazon Web Services - SES
 	public static final String AWS_SES_SENDER = "HORDE_AWS_SES_SENDER";
+
+	// Amazon Web Services - SQS
+	public static final String AWS_SQS_PREFIX = "HORDE_AWS_SQS_PREFIX";
 }

@@ -7,24 +7,20 @@
   </context-param>
   <!-- BEGIN -->
   <context-param>
-    <param-name>AWS_ACCESS_KEY_ID</param-name>
-    <param-value>AKIAJUJV4KC43J3DSNXA</param-value>
-  </context-param>
-  <context-param>
-    <param-name>AWS_SECRET_KEY</param-name>
-    <param-value>7ucHXYnMk+lWsstJeZvactOwneLqgdxVVBbKhLHQ</param-value>
-  </context-param>
-  <context-param>
     <param-name>HORDE_AWS_S3_BUCKET</param-name>
-    <param-value>dev.data.browserhorde.net</param-value>
+    <param-value>net.browserhorde.demo</param-value>
   </context-param>
   <context-param>
     <param-name>HORDE_AWS_S3_PROXY</param-name>
     <param-value>true</param-value>
   </context-param>
   <context-param>
+  	<param-name>HORDE_AWS_SQS_PREFIX</param-name>
+  	<param-value>net_browserhorde_demo</param-value>
+  </context-param>
+  <context-param>
     <param-name>HORDE_AWS_SDB_DOMAIN_PREFIX</param-name>
-    <param-value>dev.browserhorde.net</param-value>
+    <param-value>net.browserhorde.demo</param-value>
   </context-param>
   <context-param>
     <param-name>HORDE_AWS_SES_SENDER</param-name>
@@ -36,17 +32,40 @@
   </context-param>
   <!-- END -->
   <listener>
-    <listener-class>com.browserhorde.server.Configurator</listener-class>
+    <listener-class>com.browserhorde.server.ExecutorServiceListener</listener-class>
   </listener>
   <listener>
-    <listener-class>com.browserhorde.server.ExecutorServiceListener</listener-class>
+  	<listener-class>com.browserhorde.server.MemcachedClientListener</listener-class>
+  </listener>
+  <listener>
+    <listener-class>com.browserhorde.server.InjectionListener</listener-class>
+  </listener>
+  <listener>
+    <listener-class>com.browserhorde.server.Configurator</listener-class>
   </listener>
   <listener>
     <listener-class>org.apache.commons.fileupload.servlet.FileCleanerCleanup</listener-class>
   </listener>
-  <listener>
-    <listener-class>com.browserhorde.server.DependencyInjection</listener-class>
-  </listener>
+  <filter>
+  	<filter-name>CORS</filter-name>
+  	<filter-class>com.thetransactioncompany.cors.CORSFilter</filter-class>
+  	<init-param>
+  		<param-name>cors.supportedMethods</param-name>
+  		<param-value>GET,POST,PUT,DELETE,OPTIONS</param-value>
+  	</init-param>
+  	<init-param>
+  		<param-name>cors.supportedHeaders</param-name>
+  		<param-value>Origin,Content-Type,Allow,Accept,X-Horde-Machine-Id</param-value>
+  	</init-param>
+  	<init-param>
+  		<param-name>cors.exposedHeaders</param-name>
+  		<param-value>Content-Type,Retry-After,X-Horde-Machine-Id,X-RateLimit,X-RateLimit-Remaining,X-RateLimit-Reset</param-value>
+  	</init-param>
+  </filter>
+  <filter-mapping>
+  	<filter-name>CORS</filter-name>
+  	<url-pattern>/*</url-pattern>
+  </filter-mapping>
   <filter>
     <filter-name>GuiceFilter</filter-name>
     <filter-class>com.browserhorde.server.IntermediateGuiceFilter</filter-class>
