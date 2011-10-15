@@ -1,7 +1,7 @@
 package com.browserhorde.server.api;
 
-import javax.ws.rs.core.Response.StatusType;
 import javax.ws.rs.core.Response.Status.Family;
+import javax.ws.rs.core.Response.StatusType;
 
 public enum ApiStatus implements StatusType {
 	// Success Codes

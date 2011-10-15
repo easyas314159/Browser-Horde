@@ -15,19 +15,21 @@ import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.model.Message;
 import com.browserhorde.server.gson.GsonUtils;
 import com.browserhorde.server.inject.QueueGZIP;
+import com.browserhorde.server.inject.ThreadGroupMessageHandling;
 import com.browserhorde.server.util.ConcurrentPipeStream;
 import com.google.gson.Gson;
 import com.google.inject.Inject;
 
-public class GzipProcessor extends MessageHandler {
+public class GzipThread extends MessageHandler {
 	private final Logger log = Logger.getLogger(getClass());
 
 	private final AmazonS3 awsS3;
 	private final Gson gson;
 	
 	@Inject
-	public GzipProcessor(AmazonSQSAsync awsSQS, AmazonS3 awsS3, @QueueGZIP String awsQueueGzip) {
-		super(awsSQS, awsQueueGzip);
+	public GzipThread(@ThreadGroupMessageHandling ThreadGroup g, AmazonSQSAsync awsSQS, AmazonS3 awsS3, @QueueGZIP String awsQueueGzip) {
+		super(g, awsSQS, awsQueueGzip);
+
 		this.awsS3 = awsS3;
 		this.gson = GsonUtils.newGson();
 	}

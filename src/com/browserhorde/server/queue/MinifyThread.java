@@ -19,20 +19,21 @@ import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.browserhorde.server.gson.GsonUtils;
 import com.browserhorde.server.inject.QueueGZIP;
 import com.browserhorde.server.inject.QueueMinify;
+import com.browserhorde.server.inject.ThreadGroupMessageHandling;
 import com.browserhorde.server.util.ConcurrentPipeStream;
 import com.google.gson.Gson;
 import com.google.inject.Inject;
 import com.yahoo.platform.yui.compressor.JavaScriptCompressor;
 
-public class MinifyProcessor extends MessageHandler {
+public class MinifyThread extends MessageHandler {
 	private final AmazonSQSAsync awsSQS;
 	private final AmazonS3 awsS3;
 	private final String awsQueueGzip;
 	private final Gson gson;
 
 	@Inject
-	public MinifyProcessor(AmazonSQSAsync awsSQS, AmazonS3 awsS3, @QueueMinify String awsQueueMinify, @QueueGZIP String awsQueueGzip) {
-		super(awsSQS, awsQueueMinify);
+	public MinifyThread(@ThreadGroupMessageHandling ThreadGroup g, AmazonSQSAsync awsSQS, AmazonS3 awsS3, @QueueMinify String awsQueueMinify, @QueueGZIP String awsQueueGzip) {
+		super(g, awsSQS, awsQueueMinify);
 
 		this.awsS3 = awsS3;
 		this.awsSQS = awsSQS;

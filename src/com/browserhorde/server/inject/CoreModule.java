@@ -63,6 +63,11 @@ public class CoreModule extends JerseyServletModule {
 				.toProvider(RandomProvider.class)
 				.in(RequestScoped.class);
 
+			bind(ThreadGroup.class)
+				.annotatedWith(ThreadGroupMessageHandling.class)
+				.toProvider(new ThreadGroupProvider("MessageHandling").withDaemon(true))
+				.in(Singleton.class);
+
 			Map<String, String> params = new HashMap<String, String>();
             params.put(
             		PackagesResourceConfig.PROPERTY_PACKAGES,
@@ -138,9 +143,13 @@ public class CoreModule extends JerseyServletModule {
 		bindNamed(Boolean.class, ServletInitOptions.AWS_S3_PROXY, ParamUtils.asBoolean(p.getProperty(ServletInitOptions.AWS_S3_PROXY), false));
 
 		bindNamed(String.class, ServletInitOptions.AWS_SDB_DOMAIN_PREFIX, p.getProperty(ServletInitOptions.AWS_SDB_DOMAIN_PREFIX));
-		
+
 		bindNamed(String.class, ServletInitOptions.AWS_SQS_PREFIX, p.getProperty(ServletInitOptions.AWS_SQS_PREFIX));
 
-		bindNamed(String.class, ServletInitOptions.AWS_SES_SENDER, p.getProperty(ServletInitOptions.AWS_SES_SENDER));
+		String awsSender = p.getProperty(ServletInitOptions.AWS_SES_SENDER);
+	
+		bindConstant()
+			.annotatedWith(AwsEmailSender.class)
+			.to(awsSender);
 	}
 }

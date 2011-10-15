@@ -105,13 +105,39 @@ var modules = [
 			t: sa - this.nulltime
 		});
 	},
-	function() {},
-	function() {},
-	function() {},
-	function() {},
-	function() {},
-	function() {},
-	function() {}
+	function() {
+		var s = -five, sa = -one;
+
+		timer(t);
+		for(var i = 0; i < this.iters; ++i) {
+			s = -s;
+			sa = sa + s;
+		}
+		timer(t);
+		var sc = t.elapsed;
+
+		s = -five, sa = -one;
+		var u = sa, v = 0.0, w = 0.0, x = 0.0;
+		timer(t);
+		for(var i = 0; i < this.iters; ++i) {
+			s = -s;
+			sa = sa + s;
+
+			u  = u + two;
+			x  = x +(s - u);
+			v  = v - s * u;
+			w  = w + s / u;
+		}
+		timer(t);
+		
+		this.result.push({
+			add: 3,
+			sub: 2,
+			mul: 1,
+			div: 1,
+			t : (t.elapsed - sc)
+		});
+	}
 ];
 
 function timer(p) {
