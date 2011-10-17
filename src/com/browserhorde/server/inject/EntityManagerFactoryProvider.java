@@ -21,6 +21,7 @@ import com.google.inject.Provider;
 import com.google.inject.name.Named;
 import com.spaceprogram.simplejpa.cache.KittyCacheFactory;
 
+@SuppressWarnings("deprecation")
 public class EntityManagerFactoryProvider implements Provider<EntityManagerFactory> {
 	private final Logger log = Logger.getLogger(getClass());
 

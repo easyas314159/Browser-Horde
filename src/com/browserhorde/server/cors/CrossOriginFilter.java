@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.browserhorde.server.HttpFilter;
 
+@SuppressWarnings("unused")
 public class CrossOriginFilter extends HttpFilter {
 	private static final String CORS_ALLOW_GENERIC_HTTP_REQUESTS = "cors.allowGenericHttpRequests";
 	private static final String CORS_ALLOW_ORIGIN = "cors.allowOrigin";
@@ -28,6 +29,5 @@ public class CrossOriginFilter extends HttpFilter {
 
 	@Override
 	public void doFilter(HttpServletRequest req, HttpServletResponse rsp, FilterChain chain) throws IOException, ServletException {
-		
 	}
 }

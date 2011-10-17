@@ -16,6 +16,8 @@ import com.browserhorde.server.gson.GsonUtils;
 import com.browserhorde.server.gson.JsonElementHandler;
 import com.browserhorde.server.gson.URIHandler;
 import com.browserhorde.server.gson.URLHandler;
+import com.browserhorde.server.gson.VisibilityExclusionStrategy;
+import com.browserhorde.server.gson.VisibilityLevel;
 import com.browserhorde.server.queue.GzipThread;
 import com.browserhorde.server.queue.MessageHandler;
 import com.browserhorde.server.queue.MinifyThread;
@@ -36,17 +38,6 @@ public class Configurator implements ServletContextListener {
 
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-
-			// TODO: This needs to be tightened up security wise
-			GsonUtils.getGsonBuilder()
-				.setPrettyPrinting()
-				.excludeFieldsWithoutExposeAnnotation()
-				.setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-				.registerTypeAdapter(Date.class, new DateHandler())
-				.registerTypeHierarchyAdapter(JsonElement.class, new JsonElementHandler())
-				.registerTypeHierarchyAdapter(URI.class, new URIHandler())
-				.registerTypeHierarchyAdapter(URL.class, new URLHandler());
-				;
 
 			Thread threadMinify = injector.getInstance(MinifyThread.class);
 			Thread threadGzip = injector.getInstance(GzipThread.class);

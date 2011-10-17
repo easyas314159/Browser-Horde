@@ -31,7 +31,7 @@ public class XMachineIdFilter extends HttpFilter implements Filter {
 		);
 
 	private static final String NS_MACHINE_ID = DigestUtils.md5Hex("machine_id");
-	
+
 	@Inject private MemcachedClient memcached;
 
 	@Override
@@ -75,7 +75,9 @@ public class XMachineIdFilter extends HttpFilter implements Filter {
 			machineId = UUID.randomUUID().toString();
 		}
 
-		// TODO: Store machine id so it can be accessed by servlets down the chain
+		req = new ModifyHeaderWrapper(req)
+			.withHeader(ApiHeaders.X_HORDE_MACHINE_ID, machineId);
+
 		// TODO: track machine metrics
 
 		rsp.setHeader(ApiHeaders.X_HORDE_MACHINE_ID, machineId);

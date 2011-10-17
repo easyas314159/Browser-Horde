@@ -6,9 +6,13 @@ import javax.servlet.ServletContextListener;
 
 import org.apache.log4j.Logger;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.browserhorde.server.aws.AmazonWebServicesModule;
+import com.browserhorde.server.gson.GsonModule;
 import com.browserhorde.server.inject.CoreModule;
 import com.browserhorde.server.inject.QueueModule;
+import com.browserhorde.server.util.ParamUtils;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Stage;
@@ -18,10 +22,23 @@ public class InjectionListener implements ServletContextListener {
 
 	private Logger log = Logger.getLogger(getClass());
 
+	private AWSCredentials awsCredentials;
+
 	@Override
 	public void contextInitialized(ServletContextEvent evt) {
 		try {
 			ServletContext context = evt.getServletContext();
+
+			String awsAccessKey = ParamUtils.coalesce(
+					context.getInitParameter(ServletInitOptions.AWS_ACCESS_KEY),
+					System.getenv().get(ServletInitOptions.AWS_ACCESS_KEY)
+				);
+			String awsSecretKey = ParamUtils.coalesce(
+					context.getInitParameter(ServletInitOptions.AWS_SECRET_KEY),
+					System.getenv().get(ServletInitOptions.AWS_SECRET_KEY)
+				);
+			awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+
 			Injector injector = getInjector(context);
 			context.setAttribute(INJECTOR_NAME, injector);
 		}
@@ -46,7 +63,8 @@ public class InjectionListener implements ServletContextListener {
 		injector = Guice.createInjector(
 				Stage.PRODUCTION,
 				new CoreModule(context),
-				new AmazonWebServicesModule(),
+				new GsonModule(),
+				new AmazonWebServicesModule(awsCredentials),
 				new QueueModule()
 			);
 		return injector;

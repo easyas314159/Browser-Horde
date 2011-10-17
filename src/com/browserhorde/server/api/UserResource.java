@@ -14,6 +14,8 @@ import javax.ws.rs.core.SecurityContext;
 import org.apache.commons.lang.NotImplementedException;
 
 import com.browserhorde.server.api.consumes.ModifyUserRequest;
+import com.browserhorde.server.gson.Visibility;
+import com.browserhorde.server.gson.VisibilityLevel;
 import com.browserhorde.server.security.Roles;
 
 @Path("users")
@@ -21,6 +23,7 @@ import com.browserhorde.server.security.Roles;
 public class UserResource {
 	@GET
 	@RolesAllowed({Roles.REGISTERED})
+	@Visibility(VisibilityLevel.PERSONAL)
 	public Response getSelf(@Context SecurityContext sec) {
 		Object entity = sec.getUserPrincipal();
 
@@ -34,6 +37,7 @@ public class UserResource {
 	@POST
 	@Consumes({MediaType.APPLICATION_JSON})
 	@RolesAllowed({Roles.REGISTERED})
+	@Visibility(VisibilityLevel.PERSONAL)
 	public Response updateUser(
 			@Context SecurityContext sec,
 			ModifyUserRequest userModify

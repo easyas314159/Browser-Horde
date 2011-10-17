@@ -7,20 +7,26 @@ import javax.persistence.Transient;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.browserhorde.server.gson.Visibility;
+import com.browserhorde.server.gson.VisibilityLevel;
 import com.browserhorde.server.security.BCrypt;
 import com.google.gson.annotations.Expose;
 
 @Entity
+@Visibility(VisibilityLevel.PRIVATE)
 public class User extends BaseObject implements Principal {
 	@Expose
+	@Visibility(VisibilityLevel.PERSONAL)
 	private String email;
 
 	private String hash;
 
 	@Expose
+	@Visibility(VisibilityLevel.PERSONAL)
 	private String consumerKey;
 
 	@Expose
+	@Visibility(VisibilityLevel.PERSONAL)
 	private String consumerSecret;
 
 	@Override

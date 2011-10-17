@@ -11,7 +11,6 @@ $.setup = function(data) {
 };
 $.iterate = function() {
 	if(this.idx < modules.length) {
-		$.status("Module " + (this.idx + 1));
 		modules[this.idx].call(this);
 		this.idx++;
 	}
@@ -65,6 +64,7 @@ var modules = [
 	/* 50.0% +, 00.0% -, 42.9% *, and 07.1% / */
 	/** **************************************************** */
 	function() {
+		$.status("Integrating df(x)/f(x)");
 		var i, n = loops, sa = 0.0;
 		while (sa < TLimit) {
 			n = 2 * n;
@@ -97,15 +97,10 @@ var modules = [
 		this.iters = n;
 		this.nulltime = Math.max(t.elapsed, 0.0);
 
-		this.result.push({
-			add: 7,
-			sub: 0,
-			mul: 6,
-			div: 1,
-			t: sa - this.nulltime
-		});
+		this.result.push(buildResult(7, 0, 6, 1, sa - this.nulltime));
 	},
 	function() {
+		$.status("Calculating \u03C0 from the Taylor Series");
 		var s = -five, sa = -one;
 
 		timer(t);
@@ -129,16 +124,53 @@ var modules = [
 			w  = w + s / u;
 		}
 		timer(t);
+
+		this.result.push(buildResult(3, 2, 1, 1, t.elapsed - sc));
+	},
+	function() {
+		$.status("Integrating sin(x) from 0 to \u03C0/3 using Trapazoidal Method");
+		timer(t);
+		timer(t);
+		this.result.push(buildResult(6, 2, 9, 0, t.elapsed));
+	},
+	function() {
+		$.status("Integrating cos(x) from 0 to \u03C0/3 using Trapazoidal Method");
+		timer(t);
+		timer(t);
+		this.result.push(buildResult(7, 0, 8, 0, t.elapsed));
+	},
+	function() {
+		$.status("Integrating tan(x) from 0 to \u03C0/3 using Trapazoidal Method");
+		timer(t);
+		timer(t);
+		this.result.push(buildResult(13, 0, 15, 1, t.elapsed));
+	},
+	function() {
+		$.status("Integrating sin(x)*cos(x) from 0 to \u03C0/4 using Trapazoidal Method");
+		timer(t);
+		timer(t);
+		this.result.push(buildResult(13, 0, 16, 0, t.elapsed));
+	},
+	function() {
 		
-		this.result.push({
-			add: 3,
-			sub: 2,
-			mul: 1,
-			div: 1,
-			t : (t.elapsed - sc)
-		});
+	},
+	function() {
+		$.status("Integrating sin(x)*cos(x)^2 from 0 to \u03C0/3 using Trapazoidal Method");
+		timer(t);
+		timer(t);
+		this.result.push(buildResult(7, 0, 8, 0, t.elapsed));
 	}
 ];
+
+function buildResult(add, sub, mul, div, t) {
+	return {
+		add: add,
+		sub: sub,
+		mul: mul,
+		div: div,
+		t: t
+	};
+}
 
 function timer(p) {
 	var q = p.now;

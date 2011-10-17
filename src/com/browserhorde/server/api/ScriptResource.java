@@ -36,7 +36,6 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
@@ -46,6 +45,8 @@ import com.browserhorde.server.api.error.ForbiddenException;
 import com.browserhorde.server.entity.Script;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.gson.GsonUtils;
+import com.browserhorde.server.gson.Visibility;
+import com.browserhorde.server.gson.VisibilityLevel;
 import com.browserhorde.server.inject.QueueGZIP;
 import com.browserhorde.server.inject.QueueMinify;
 import com.browserhorde.server.queue.ProcessObject;
@@ -56,6 +57,7 @@ import com.google.inject.name.Named;
 import com.sun.jersey.api.NotFoundException;
 
 @Path("scripts")
+@Visibility(VisibilityLevel.PRIVATE)
 @Produces({MediaType.APPLICATION_JSON})
 public class ScriptResource {
 	private final Logger log = Logger.getLogger(getClass());
@@ -76,7 +78,7 @@ public class ScriptResource {
 		this.awsSqsGzip = gzipQueue;
 		this.awsSqsMinify = minQueue;
 	}
-	
+
 	@GET
 	@RolesAllowed(Roles.REGISTERED)
 	public Response listScripts(@Context SecurityContext sec) {
@@ -311,10 +313,9 @@ public class ScriptResource {
 
 		PutObjectRequest putRequest = new PutObjectRequest(bucket, id, source, metadata); 
 
-		PutObjectResult putResult = awsS3.putObject(putRequest);
+		awsS3.putObject(putRequest);
 		awsS3.setObjectAcl(bucket, id, CannedAccessControlList.PublicRead);
 
-		SendMessageRequest sendMsgRequest;
 		Gson gson = GsonUtils.newGson();
 
 		ProcessObject gz = new ProcessObject(bucket, id);
@@ -322,77 +323,5 @@ public class ScriptResource {
 
 		ProcessObject min = new ProcessObject(bucket, id);
 		awsSQS.sendMessageAsync(new SendMessageRequest(awsSqsMinify, gson.toJson(min)));
-
-		//awsSQS.sendMessageAsync(arg0)
-
-		/*
-		String prefix = String.format("scripts/%s", id);
-
-		final String keyOrig = String.format("%s/%s", prefix, FILE_ORIGINAL);
-		final String keyMini = String.format("%s/%s", prefix, FILE_MINIFIED);
-		final String keyComp = String.format("%s/%s", prefix, FILE_COMPRESSED);
-		final String keyCompMini = String.format("%s/%s", prefix, FILE_MINIFIED_COMPRESSED);
-
-		// Do some crazy input stream branching
-		final ConcurrentPipeStream pipeOrig = new ConcurrentPipeStream();
-		final ConcurrentPipeStream pipeComp = new ConcurrentPipeStream();
-		final ConcurrentPipeStream pipeMini = new ConcurrentPipeStream();
-		final ConcurrentPipeStream pipeCompMini = new ConcurrentPipeStream();
-
-		final GZIPOutputStream gzipOrig = new GZIPOutputStream(pipeComp.getOutputStream());
-		final GZIPOutputStream gzipMini = new GZIPOutputStream(pipeCompMini.getOutputStream());
-
-		final TeeOutputStream teeBranch = new TeeOutputStream(gzipOrig, pipeOrig.getOutputStream());
-		final TeeInputStream teeOrig = new TeeInputStream(source, teeBranch, true);
-		final TeeInputStream teeMini = new TeeInputStream(pipeMini.getInputStream(), gzipMini, true);
-
-		final ObjectMetadata metaRaw = new ObjectMetadata();
-		metaRaw.setContentType("application/javascript");
-
-		awsS3.putObject(bucket, keyOrig, source, metaRaw);
-		awsS3.setObjectAcl(bucket, keyOrig, CannedAccessControlList.PublicRead);
-
-		final ObjectMetadata metaComp = new ObjectMetadata();
-		metaComp.setContentType("application/javascript");
-		metaComp.setContentEncoding("gzip");
-
-		// Perform crazy async file upload
-		Future<PutObjectResult> fOrig = executorService.submit(new AmazonS3AsyncPutObject(
-				awsS3, new PutObjectRequest(bucket, keyOrig, teeOrig, metaRaw), CannedAccessControlList.PublicRead
-			));
-		Future<PutObjectResult> fComp = executorService.submit(new AmazonS3AsyncPutObject(
-				awsS3, new PutObjectRequest(bucket, keyComp, pipeComp.getInputStream(), metaComp), CannedAccessControlList.PublicRead
-			));
-		Future<Void> fMinify = executorService.submit(new Callable<Void>() {
-			@Override
-			public Void call() throws Exception {
-				Writer writerMini = new OutputStreamWriter(pipeMini.getOutputStream());
-				Reader readerMini = new InputStreamReader(pipeOrig.getInputStream());
-				JavaScriptCompressor compressor = new JavaScriptCompressor(readerMini, null);
-				compressor.compress(writerMini, 16000, true, false, true, false);
-
-				readerMini.close();
-				writerMini.close();
-
-				return null;
-			}
-		});
-		Future<PutObjectResult> fMini = executorService.submit(new AmazonS3AsyncPutObject(
-				awsS3, new PutObjectRequest(bucket, keyMini, teeMini, metaRaw), CannedAccessControlList.PublicRead
-			));
-		Future<PutObjectResult> fMiniComp = executorService.submit(new AmazonS3AsyncPutObject(
-				awsS3, new PutObjectRequest(bucket, keyCompMini, pipeCompMini.getInputStream(), metaComp), CannedAccessControlList.PublicRead
-			));
-
-		try {
-			PutObjectResult result = fOrig.get();
-		}
-		catch(InterruptedException e) {
-			throw new WebApplicationException(e);
-		}
-		catch(ExecutionException e) {
-			throw new WebApplicationException(e);
-		}
-		*/
 	}
 }

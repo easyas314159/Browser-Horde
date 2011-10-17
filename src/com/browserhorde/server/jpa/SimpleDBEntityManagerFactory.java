@@ -20,6 +20,7 @@ import com.amazonaws.services.simpledb.AmazonSimpleDBAsync;
 import com.amazonaws.services.simpledb.AmazonSimpleDBAsyncClient;
 import com.amazonaws.services.simpledb.AmazonSimpleDBClient;
 
+@SuppressWarnings("rawtypes")
 public class SimpleDBEntityManagerFactory implements EntityManagerFactory {
 	public static final String PARAM_EXECUTOR_SERVICE = "aws.executor_service";
 

@@ -35,7 +35,6 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.api.consumes.ModifyTaskRequest;
@@ -224,8 +223,8 @@ public class TaskResource {
 		metadata.addUserMetadata("Access-Control-Allow-Methods", "GET");
 
 		PutObjectRequest putRequest = new PutObjectRequest(awsS3Bucket, key, stream, metadata);
-		PutObjectResult putResult = awsS3.putObject(putRequest);
 
+		awsS3.putObject(putRequest);
 		awsS3.setObjectAcl(awsS3Bucket, key, CannedAccessControlList.PublicRead);
 
 		// TODO: gzip data

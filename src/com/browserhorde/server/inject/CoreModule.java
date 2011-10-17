@@ -1,5 +1,6 @@
 package com.browserhorde.server.inject;
 
+import java.security.Principal;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,7 +44,7 @@ public class CoreModule extends JerseyServletModule {
 	public CoreModule(ServletContext context) {
 		this.context = context;
 	}
-	
+
 	@Override
 	protected void configureServlets() {
 		try {
@@ -67,6 +68,10 @@ public class CoreModule extends JerseyServletModule {
 				.annotatedWith(ThreadGroupMessageHandling.class)
 				.toProvider(new ThreadGroupProvider("MessageHandling").withDaemon(true))
 				.in(Singleton.class);
+			
+			bind(Principal.class)
+				.toProvider(PrincipalProvider.class)
+				.in(RequestScoped.class);
 
 			Map<String, String> params = new HashMap<String, String>();
             params.put(

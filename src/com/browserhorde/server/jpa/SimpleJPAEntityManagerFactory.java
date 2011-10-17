@@ -24,6 +24,7 @@ import com.spaceprogram.simplejpa.cache.NoopCacheFactory;
  * @deprecated This is simply a work around for the shoddy implementation of SimpleJPA
  */
 @Deprecated
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class SimpleJPAEntityManagerFactory extends EntityManagerFactoryImpl {
 	public static final String PARAM_EXECUTOR_SERVICE = "aws.executor_service";
 
@@ -138,7 +139,6 @@ public class SimpleJPAEntityManagerFactory extends EntityManagerFactoryImpl {
 	}
 	
 	@Override
-	@SuppressWarnings("unchecked")
 	public Cache getCache(Class clazz) {
 		AnnotationInfo ai = getAnnotationManager().getAnnotationInfo(clazz);
 		return cacheFactory.createCache(ai.getRootClass().getName());
