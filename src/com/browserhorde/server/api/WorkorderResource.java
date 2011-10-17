@@ -38,8 +38,6 @@ import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Task;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.gson.GsonTranscoder;
-import com.browserhorde.server.gson.Visibility;
-import com.browserhorde.server.gson.VisibilityLevel;
 import com.browserhorde.server.util.ParamUtils;
 import com.google.inject.Inject;
 import com.sun.jersey.api.NotFoundException;

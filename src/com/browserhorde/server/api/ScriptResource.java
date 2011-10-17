@@ -45,8 +45,6 @@ import com.browserhorde.server.api.error.ForbiddenException;
 import com.browserhorde.server.entity.Script;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.gson.GsonUtils;
-import com.browserhorde.server.gson.Visibility;
-import com.browserhorde.server.gson.VisibilityLevel;
 import com.browserhorde.server.inject.QueueGZIP;
 import com.browserhorde.server.inject.QueueMinify;
 import com.browserhorde.server.queue.ProcessObject;
@@ -57,7 +55,6 @@ import com.google.inject.name.Named;
 import com.sun.jersey.api.NotFoundException;
 
 @Path("scripts")
-@Visibility(VisibilityLevel.PRIVATE)
 @Produces({MediaType.APPLICATION_JSON})
 public class ScriptResource {
 	private final Logger log = Logger.getLogger(getClass());
