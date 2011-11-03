@@ -3,6 +3,10 @@ package com.browserhorde.server;
 public final class ServletInitOptions {
 	private ServletInitOptions() {}
 
+	// Rate Limiting
+	public static final String RATE_LIMIT = "HORDE_RATE_LIMIT";
+	public static final String RATE_LIMIT_TIMEOUT = "HORDER_RATE_LIMIT_TIMEOUT";
+
 	// Thread Pool
 	public static final String EXECUTOR_CORE_POOL_SIZE = "HORDE_EXECUTOR_CORE_POOL_SIZE"; 
 	public static final String EXECUTOR_KEEP_ALIVE_TIMEOUT = "HORDE_EXECUTOR_KEEP_ALIVE_TIMEOUT";
@@ -11,7 +15,8 @@ public final class ServletInitOptions {
 
 	// Memcached
 	public static final String MEMCACHED_CLUSTER = "HORDE_MEMCACHED_CLUSTER";
-	public static final String MEMCACHED_CONNECTION_FACTORY = "HORDE_MEMCACHED_CONNECTION_FACTORY";
+	public static final String MEMCACHED_FAILURE_MODE = "HORDE_MEMCACHED_FAILURE_MODE";
+	public static final String MEMCACHED_PROTOCOL = "HORDE_MEMCACHED_PROTOCOL";
 
 	// Amazon Web Services - General
 	public static final String AWS_ACCESS_KEY = "AWS_ACCESS_KEY_ID";
@@ -22,7 +27,6 @@ public final class ServletInitOptions {
 	// Amazon Web Services - S3
 	public static final String AWS_S3_BUCKET = "HORDE_AWS_S3_BUCKET";
 	public static final String AWS_S3_BUCKET_ENDPOINT = "HORDE_AWS_S3_BUCKET_ENDPOINT";
-	public static final String AWS_S3_PROXY = "HORDE_AWS_S3_PROXY";
 
 	// Amazon Web Services - SimpleDB
 	public static final String AWS_SDB_DOMAIN_PREFIX = "HORDE_AWS_SDB_DOMAIN_PREFIX";

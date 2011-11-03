@@ -14,7 +14,7 @@ public class Script extends BaseObject {
 	@Expose private String name;
 	@Expose private String description;
 
-	@Expose private Boolean debug;
+	// TODO: Scripts should tie into required libraries
 
 	@ManyToOne
 	public User getOwner() {
@@ -36,16 +36,6 @@ public class Script extends BaseObject {
 	}
 	public void setDescription(String description) {
 		this.description = description;
-	}
-
-	public Boolean isDebug() {
-		return getDebug();
-	}
-	public Boolean getDebug() {
-		return debug;
-	}
-	public void setDebug(Boolean debug) {
-		this.debug = debug;
 	}
 
 	@Override

@@ -8,8 +8,6 @@ import com.google.gson.annotations.Expose;
 
 @Entity
 public class Task extends BaseObject implements HasAttachedData {
-	private static final String BASE_PATH = "tasks";
-
 	@Expose
 	private Job job;
 
@@ -61,6 +59,6 @@ public class Task extends BaseObject implements HasAttachedData {
 	@Override
 	@Transient
 	public String getAttachmentKey() {
-		return String.format("%s/%s/%s", BASE_PATH, getJob().getId(), getId());
+		return String.format("%s/%s", getJob().getScript().getId(), getId());
 	}
 }

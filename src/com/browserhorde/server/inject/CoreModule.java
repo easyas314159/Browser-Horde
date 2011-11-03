@@ -21,6 +21,7 @@ import com.browserhorde.server.ExecutorServiceListener;
 import com.browserhorde.server.MemcachedClientListener;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.XMachineIdFilter;
+import com.browserhorde.server.XRateLimitFilter;
 import com.browserhorde.server.XRuntime;
 import com.browserhorde.server.cors.PreflightHijackFilter;
 import com.browserhorde.server.security.AuthenticationFilter;
@@ -99,7 +100,7 @@ public class CoreModule extends JerseyServletModule {
 		filter("/*").through(XRuntime.class);
 
 		// FIXME: Rate limiter is currently broken
-		//filter("/*").through(XRateLimitFilter.class);
+		filter("/*").through(XRateLimitFilter.class);
 
 		filter("/*").through(new PreflightHijackFilter());
 
@@ -145,7 +146,6 @@ public class CoreModule extends JerseyServletModule {
 
 		bindNamed(String.class, ServletInitOptions.AWS_S3_BUCKET, awsS3Bucket);
 		bindNamed(String.class, ServletInitOptions.AWS_S3_BUCKET_ENDPOINT, ParamUtils.asString(p.getProperty(ServletInitOptions.AWS_S3_BUCKET_ENDPOINT), awsS3BucketEndpoint));
-		bindNamed(Boolean.class, ServletInitOptions.AWS_S3_PROXY, ParamUtils.asBoolean(p.getProperty(ServletInitOptions.AWS_S3_PROXY), false));
 
 		bindNamed(String.class, ServletInitOptions.AWS_SDB_DOMAIN_PREFIX, p.getProperty(ServletInitOptions.AWS_SDB_DOMAIN_PREFIX));
 

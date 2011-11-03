@@ -1,8 +1,5 @@
 package com.browserhorde.server;
 
-import java.net.URI;
-import java.net.URL;
-import java.util.Date;
 import java.util.TimeZone;
 
 import javax.servlet.ServletContext;
@@ -11,18 +8,9 @@ import javax.servlet.ServletContextListener;
 
 import org.apache.log4j.Logger;
 
-import com.browserhorde.server.gson.DateHandler;
-import com.browserhorde.server.gson.GsonUtils;
-import com.browserhorde.server.gson.JsonElementHandler;
-import com.browserhorde.server.gson.URIHandler;
-import com.browserhorde.server.gson.URLHandler;
-import com.browserhorde.server.gson.VisibilityExclusionStrategy;
-import com.browserhorde.server.gson.VisibilityLevel;
 import com.browserhorde.server.queue.GzipThread;
 import com.browserhorde.server.queue.MessageHandler;
 import com.browserhorde.server.queue.MinifyThread;
-import com.google.gson.FieldNamingPolicy;
-import com.google.gson.JsonElement;
 import com.google.inject.Injector;
 
 public class Configurator implements ServletContextListener {

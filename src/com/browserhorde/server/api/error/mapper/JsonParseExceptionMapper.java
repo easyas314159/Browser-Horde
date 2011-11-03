@@ -9,6 +9,7 @@ import javax.ws.rs.ext.Provider;
 import org.apache.log4j.Logger;
 
 import com.browserhorde.server.api.ApiStatus;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonParseException;
 
 @Provider
@@ -21,7 +22,7 @@ public class JsonParseExceptionMapper implements ExceptionMapper<JsonParseExcept
 		log.info("JSON Parsing Exception", ex);
 		return Response
 			.status(ApiStatus.BAD_REQUEST)
-			.entity("Mallformed JSON")
+			.entity(new JsonNull())
 			.build();
 	}
 }

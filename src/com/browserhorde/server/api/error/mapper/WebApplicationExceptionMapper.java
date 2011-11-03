@@ -11,6 +11,7 @@ import javax.ws.rs.ext.Provider;
 import org.apache.log4j.Logger;
 
 import com.browserhorde.server.api.ApiStatus;
+import com.google.gson.JsonNull;
 
 @Provider
 @Produces({MediaType.APPLICATION_JSON})
@@ -25,9 +26,13 @@ public class WebApplicationExceptionMapper implements ExceptionMapper<WebApplica
 				.status(ApiStatus.UNAUTHORIZED)
 				.header(HttpHeaders.WWW_AUTHENTICATE, "Basic")
 				.header(HttpHeaders.WWW_AUTHENTICATE, "OAuth")
+				.entity(new JsonNull())
 				.build();
 		}
 		log.error("Something Broke!", ex);
-		return Response.status(ApiStatus.INTERNAL_SERVER_ERROR).build();
+		return Response
+			.status(ApiStatus.INTERNAL_SERVER_ERROR)
+			.entity(new JsonNull())
+			.build();
 	}
 }

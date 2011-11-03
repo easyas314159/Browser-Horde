@@ -10,6 +10,8 @@ public class WorkorderCheckin {
 	@Expose private String id;
 	@Expose private String task;
 
+	@Expose private WorkorderCheckinStatus status;
+
 	@Expose private JsonElement data;
 
 	public String getId() {
@@ -24,6 +26,13 @@ public class WorkorderCheckin {
 	}
 	public void setTask(String task) {
 		this.task = task;
+	}
+
+	public WorkorderCheckinStatus getStatus() {
+		return status;
+	}
+	public void setStatus(WorkorderCheckinStatus status) {
+		this.status = status;
 	}
 
 	public JsonElement getData() {

@@ -5,12 +5,12 @@ import java.net.InetAddress;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import net.spy.memcached.CASMutation;
-import net.spy.memcached.CASMutator;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.transcoders.Transcoder;
 
@@ -19,27 +19,31 @@ import org.apache.log4j.Logger;
 
 import com.browserhorde.server.api.ApiHeaders;
 import com.browserhorde.server.gson.GsonTranscoder;
-import com.browserhorde.server.gson.GsonUtils;
+import com.browserhorde.server.util.FixedCASMutator;
+import com.browserhorde.server.util.ParamUtils;
+import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 @Singleton
 public class XRateLimitFilter extends HttpFilter {
-	private static final int RATE_LIMIT = 60;
-	private static final int RATE_LIMIT_TIMEOUT = 60;
-	
-	//private static final int RATE_LIMIT = 10;
-	//private static final int RATE_LIMIT_TIMEOUT = 60;
-
 	private static final String NS_RATE_LIMIT = DigestUtils.md5Hex("rate_limit");
 
 	private final Logger log = Logger.getLogger(getClass());
 
+	private int rateLimit;
+	private int rateLimitTimeout;
+
+	@Inject private GsonBuilder gsonBuilder;
 	@Inject private MemcachedClient memcached;
 
 	@Override
-	public void init(FilterConfig arg0) throws ServletException {
+	public void init(FilterConfig config) throws ServletException {
+		ServletContext context = config.getServletContext();
+
+		rateLimit = ParamUtils.asInteger(context.getInitParameter(ServletInitOptions.RATE_LIMIT), 60);
+		rateLimitTimeout = ParamUtils.asInteger(context.getInitParameter(ServletInitOptions.RATE_LIMIT_TIMEOUT), 60);
 	}
 	@Override
 	public void destroy() {
@@ -51,36 +55,37 @@ public class XRateLimitFilter extends HttpFilter {
 		String key = NS_RATE_LIMIT + DigestUtils.md5Hex(ip.getAddress());
 
 		Transcoder<RateLimit> tc = new GsonTranscoder<RateLimit>(
-				GsonUtils.getGsonBuilder(),
+				gsonBuilder,
 				RateLimit.class
 			);
-		CASMutator<RateLimit> mutator = new CASMutator<RateLimit>(
+		FixedCASMutator<RateLimit> mutator = new FixedCASMutator<RateLimit>(
 				memcached, tc
 			);
 
 		int now = (int)(System.currentTimeMillis() / 1000);
-		int timeout = now + RATE_LIMIT_TIMEOUT;
+		int timeout = now + rateLimitTimeout;
 
-		RateLimitMutation rateLimitMutation = new RateLimitMutation(RATE_LIMIT, timeout);
+		RateLimitMutation rateLimitMutation = new RateLimitMutation(rateLimit, timeout);
 		try {
 			// FIXME: Something is wrong with the handling of timeouts
-			RateLimit rateLimit = memcached.get(key, tc);
-			if(rateLimit == null) {
-				rateLimit = new RateLimit(RATE_LIMIT, timeout);
-				rateLimit = mutator.cas(key, rateLimit, timeout, rateLimitMutation);
+			// Timeouts are being reset to 0 after the initial set because of a defect in CASMutator
+			RateLimit lim = memcached.get(key, tc);
+			if(lim == null) {
+				lim = new RateLimit(rateLimit, timeout);
+				lim = mutator.cas(key, lim, timeout, rateLimitMutation);
 			}
 			else {
-				timeout = rateLimit.getReset();
-				rateLimit = mutator.cas(key, rateLimit, timeout, rateLimitMutation);
+				timeout = lim.getReset();
+				lim = mutator.cas(key, lim, timeout, rateLimitMutation);
 			}
 
-			rsp.addIntHeader(ApiHeaders.X_RATE_LIMIT, rateLimit.getLimit());
-			rsp.addIntHeader(ApiHeaders.X_RATE_LIMIT_REMAINING, rateLimit.getRemaining());
-			rsp.addDateHeader(ApiHeaders.X_RATE_LIMIT_RESET, 1000L*rateLimit.getReset());
+			rsp.addIntHeader(ApiHeaders.X_RATE_LIMIT, lim.getLimit());
+			rsp.addIntHeader(ApiHeaders.X_RATE_LIMIT_REMAINING, lim.getRemaining());
+			rsp.addDateHeader(ApiHeaders.X_RATE_LIMIT_RESET, 1000L*lim.getReset());
 
-			if(rateLimit.isExceeded()) {
+			if(lim.isExceeded()) {
 				rsp.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
-				rsp.addDateHeader("Retry-After", 1000L*rateLimit.getReset());
+				rsp.addDateHeader("Retry-After", 1000L*lim.getReset());
 			}
 			else {
 				chain.doFilter(req, rsp);
@@ -94,7 +99,7 @@ public class XRateLimitFilter extends HttpFilter {
 
 	private static final class RateLimit {
 		@Expose private int limit = Integer.MAX_VALUE;
-		@Expose private int count = 0;
+		@Expose private int count = 1;
 		@Expose private int reset = Integer.MAX_VALUE;
 
 		public RateLimit() {

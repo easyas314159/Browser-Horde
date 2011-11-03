@@ -8,6 +8,7 @@ import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
 import com.browserhorde.server.api.error.InvalidRequestException;
+import com.google.gson.JsonNull;
 
 @Provider
 @Produces({MediaType.APPLICATION_JSON})
@@ -15,6 +16,9 @@ public final class InvalidRequestExceptionMapper implements ExceptionMapper<Inva
 	@Override
 	public Response toResponse(InvalidRequestException ex) {
 		// TODO: This needs some meaningful body content
-		return Response.status(Status.BAD_REQUEST).build();
+		return Response
+			.status(Status.BAD_REQUEST)
+			.entity(new JsonNull())
+			.build();
 	}
 }

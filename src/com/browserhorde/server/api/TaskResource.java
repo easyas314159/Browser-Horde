@@ -2,8 +2,6 @@ package com.browserhorde.server.api;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
@@ -15,14 +13,15 @@ import javax.persistence.EntityManager;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
@@ -35,15 +34,19 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.sqs.AmazonSQSAsync;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.api.consumes.ModifyTaskRequest;
 import com.browserhorde.server.api.error.ForbiddenException;
 import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Task;
 import com.browserhorde.server.entity.User;
-import com.browserhorde.server.gson.GsonUtils;
+import com.browserhorde.server.inject.QueueGZIP;
+import com.browserhorde.server.queue.ProcessObject;
 import com.browserhorde.server.security.Roles;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -52,11 +55,16 @@ import com.sun.jersey.api.NotFoundException;
 @Path("tasks")
 @Produces({MediaType.APPLICATION_JSON})
 public class TaskResource {
+	@Inject private GsonBuilder gsonBuilder;
+
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET) private String awsS3Bucket;
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET_ENDPOINT) private String awsS3BucketEndpoint;
-	@Inject @Named(ServletInitOptions.AWS_S3_PROXY) private Boolean awsS3Proxy;
 
 	@Inject private AmazonS3 awsS3;
+
+	@Inject private AmazonSQSAsync awsSQS;
+
+	@Inject @QueueGZIP private String awsQueueGZIP;
 
 	@Inject private EntityManager entityManager;
 
@@ -83,12 +91,12 @@ public class TaskResource {
 			.build()
 			;
 	}
-	
+
 	@GET
 	@Path("{id}/data")
 	public Response getTaskData(
-			@PathParam("id") String id,
-			@QueryParam("jsonp") String jsonp
+			@HeaderParam(HttpHeaders.IF_MODIFIED_SINCE) Date modifiedSince,
+			@PathParam("id") String id
 		) {
 
 		Task task = entityManager.find(Task.class, id);
@@ -97,30 +105,15 @@ public class TaskResource {
 		}
 
 		String key = task.getAttachmentKey();
-
-		if(awsS3Proxy) {
-			S3Object object = awsS3.getObject(awsS3Bucket, key);
-			Reader reader = new InputStreamReader(object.getObjectContent(), Charset.forName("UTF-8"));
-			JsonElement el = GsonUtils.newGson().fromJson(reader, JsonElement.class);
-
+		try {
+			URI uriS3 = URIUtils.createURI("http", awsS3BucketEndpoint, -1, key, null, null);
 			return Response
-				.status(ApiStatus.OK)
-				.entity(el)
+				.status(ApiStatus.FOUND)
+				.location(uriS3)
 				.build()
 				;
-		}
-		else {
-			try {
-				URI uriS3 = URIUtils.createURI("http", awsS3BucketEndpoint, -1, key, null, null);
-				return Response
-					.status(ApiStatus.FOUND)
-					.header("Content-Type", "application/json; charset=utf-8")
-					.location(uriS3)
-					.build()
-					;
-			} catch(URISyntaxException ex) {
-				throw new WebApplicationException(ex);
-			}
+		} catch(URISyntaxException ex) {
+			throw new WebApplicationException(ex);
 		}
 	}
 
@@ -213,21 +206,24 @@ public class TaskResource {
 
 		String key = task.getAttachmentKey();
 
-		byte [] raw = GsonUtils.newGson().toJson(source).getBytes(Charset.forName("UTF-8"));
+		// FIXME: This needs to catch malformed JSON exceptions
+		byte [] raw = gsonBuilder.create().toJson(source).getBytes(Charset.forName("UTF-8"));
 		InputStream stream = new ByteArrayInputStream(raw);
 
 		ObjectMetadata metadata = new ObjectMetadata();
 		metadata.setLastModified(new Date());
 		metadata.setContentType("application/json; charset=utf-8");
-		metadata.addUserMetadata("Access-Control-Allow-Origin", "*");
-		metadata.addUserMetadata("Access-Control-Allow-Methods", "GET");
 
 		PutObjectRequest putRequest = new PutObjectRequest(awsS3Bucket, key, stream, metadata);
 
 		awsS3.putObject(putRequest);
 		awsS3.setObjectAcl(awsS3Bucket, key, CannedAccessControlList.PublicRead);
 
-		// TODO: gzip data
+		Gson gson = gsonBuilder.create();
+
+		ProcessObject process = new ProcessObject(awsS3Bucket, key);
+		awsSQS.sendMessage(new SendMessageRequest(awsQueueGZIP, gson.toJson(process)));
+
 		// TODO: Increment billing
 
 		return Response

@@ -12,8 +12,7 @@ import com.google.inject.Provider;
 public class GsonBuilderProvider implements Provider<GsonBuilder> {
 	@Override
 	public GsonBuilder get() {
-		return new GsonBuilder()
-			.setPrettyPrinting()
+		GsonBuilder gsonBuilder = new GsonBuilder()
 			.excludeFieldsWithoutExposeAnnotation()
 			.setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
 			.registerTypeAdapter(Date.class, new DateHandler())
@@ -21,5 +20,6 @@ public class GsonBuilderProvider implements Provider<GsonBuilder> {
 			.registerTypeHierarchyAdapter(URI.class, new URIHandler())
 			.registerTypeHierarchyAdapter(URL.class, new URLHandler())
 			;
+		return gsonBuilder;
 	}
 }

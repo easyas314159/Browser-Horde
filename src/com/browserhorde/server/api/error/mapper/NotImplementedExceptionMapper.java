@@ -10,6 +10,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.log4j.Logger;
 
 import com.browserhorde.server.api.ApiStatus;
+import com.google.gson.JsonNull;
 
 @Provider
 @Produces({MediaType.APPLICATION_JSON})
@@ -21,6 +22,7 @@ public class NotImplementedExceptionMapper implements ExceptionMapper<NotImpleme
 		log.warn("Not Implemented", ex);
 		return Response
 			.status(ApiStatus.NOT_IMPLEMENTED)
+			.entity(new JsonNull())
 			.build();
 	}
 }

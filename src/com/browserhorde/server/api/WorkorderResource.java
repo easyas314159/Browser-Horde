@@ -17,6 +17,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -38,6 +39,7 @@ import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Task;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.gson.GsonTranscoder;
+import com.browserhorde.server.inject.QueueStats;
 import com.browserhorde.server.util.ParamUtils;
 import com.google.inject.Inject;
 import com.sun.jersey.api.NotFoundException;
@@ -51,6 +53,8 @@ public class WorkorderResource {
 	private final Logger log = Logger.getLogger(getClass());
 
 	@Inject private AmazonSQSAsync awsSQS;
+
+	@Inject @QueueStats private String awsQueueStats;
 
 	@Inject private Random rs;
 	@Inject private EntityManager entityManager;
@@ -108,15 +112,21 @@ public class WorkorderResource {
 			entity = new WorkorderCheckout(wo, expires, task, null);
 			WorkorderEntry entry = new WorkorderEntry(user == null ? null : user.getName(), machineId, task.getId());
 
+			// FIXME: This is a hack to ensure the script is sent to the client
+			task.getJob().getScript();
+
 			allWorkorders.put(wo, entry, expires);
 		}
 
 		entityManager.close();
 
+		CacheControl cacheControl = new CacheControl();
+		cacheControl.setNoCache(true);
+
 		return Response
 			.status(ApiStatus.OK)
 			.entity(entity)
-			.expires(expires)
+			.cacheControl(cacheControl)
 			.build()
 			;
 	}
@@ -138,7 +148,7 @@ public class WorkorderResource {
 			String taskId = checkin.getTask();
 
 			if(StringUtils.equalsIgnoreCase(userId, entry.userId)
-				&& StringUtils.equalsIgnoreCase(machineId, entry.machineId)
+				//&& StringUtils.equalsIgnoreCase(machineId, entry.machineId)
 				&& StringUtils.equalsIgnoreCase(taskId, entry.taskId)
 				) {
 
@@ -160,7 +170,9 @@ public class WorkorderResource {
 			}
 		}
 
-		return Response.status(ApiStatus.ACCEPTED).build();
+		return Response
+			.status(ApiStatus.ACCEPTED)
+			.build();
 	}
 
 	@DELETE
@@ -186,14 +198,17 @@ public class WorkorderResource {
 
 		Query le = entityManager.createQuery(
 				"select * from " + Job.class.getName()
-				+ " where randomizer <= :randomizer ORDER BY randomizer DESC"
+				+ " where randomizer <= :randomizer AND active=:active ORDER BY randomizer DESC"
 			);
 		Query ge = entityManager.createQuery(
 				"SELECT * FROM " + Job.class.getName()
-				+ " WHERE randomizer >= :randomizer ORDER BY randomizer ASC"
+				+ " WHERE randomizer >= :randomizer AND active=:active ORDER BY randomizer ASC"
 			);
 		le.setParameter("randomizer", r);
 		ge.setParameter("randomizer", r);
+
+		le.setParameter("active", Boolean.TRUE);
+		ge.setParameter("active", Boolean.TRUE);
 
 		// FIXME: Horribly Inefficient without this
 		//le.setMaxResults(1);

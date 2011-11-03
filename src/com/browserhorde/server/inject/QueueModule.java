@@ -13,6 +13,7 @@ public class QueueModule extends AbstractModule {
 		bindQueue(QueueMinify.class, "Minify");
 		bindQueue(QueueBilling.class, "Billing");
 		bindQueue(QueueDelete.class, "Delete");
+		bindQueue(QueueStats.class, "Stats");
 	}
 
 	private void bindQueue(Class<? extends Annotation> a, String qn) {

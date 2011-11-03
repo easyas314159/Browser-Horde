@@ -13,7 +13,8 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyWriter;
 import javax.ws.rs.ext.Provider;
 
-import com.browserhorde.server.api.Api;
+import org.apache.commons.io.IOUtils;
+
 import com.browserhorde.server.gson.Visibility;
 import com.browserhorde.server.gson.VisibilityExclusionStrategy;
 import com.browserhorde.server.gson.VisibilityLevel;
@@ -21,20 +22,15 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 
 @Provider
 @Produces(MediaType.APPLICATION_JSON)
 public class JsonWriter implements MessageBodyWriter<Object> {
 	private final Injector injector;
 
-	private ThreadLocal<GsonBuilder> threadLocalBuilders;
-
 	@Inject
 	public JsonWriter(Injector injector) {
 		this.injector = injector;
-
-		threadLocalBuilders = new ThreadLocal<GsonBuilder>();
 	}
 
 	@Override
@@ -61,16 +57,14 @@ public class JsonWriter implements MessageBodyWriter<Object> {
 			}
 		}
 
-		// TODO: If the user is logged in visibility should probably be PRIVATE
+		// TODO: If the user is logged in visibility should be PRIVATE
 		VisibilityLevel level = visibility == null ? VisibilityLevel.PUBLIC : visibility.value();
 
-		Gson gson = getBuilder().setExclusionStrategies(new VisibilityExclusionStrategy(level)).create();
+		GsonBuilder gsonBuilder = injector.getInstance(GsonBuilder.class).serializeNulls();
+
+		Gson gson = gsonBuilder.setExclusionStrategies(new VisibilityExclusionStrategy(level)).create();
 		OutputStreamWriter writer = new OutputStreamWriter(output, "UTF-8");
 		gson.toJson(response, type, writer);
-		writer.flush();
-	}
-	
-	private GsonBuilder getBuilder() {
-		return injector.getInstance(Key.get(GsonBuilder.class, Api.class));
+		IOUtils.closeQuietly(writer);
 	}
 }

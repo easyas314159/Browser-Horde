@@ -8,7 +8,6 @@ import com.google.gson.annotations.Expose;
 public class ModifyScriptRequest {
 	@Expose public String name;
 	@Expose public String description;
-	@Expose public Boolean debug;
 
 	@Provider
 	public static final class Reader extends JsonReader<ModifyScriptRequest> {}

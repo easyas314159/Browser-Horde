@@ -16,12 +16,12 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
-import com.browserhorde.server.gson.GsonUtils;
 import com.browserhorde.server.inject.QueueGZIP;
 import com.browserhorde.server.inject.QueueMinify;
 import com.browserhorde.server.inject.ThreadGroupMessageHandling;
 import com.browserhorde.server.util.ConcurrentPipeStream;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 import com.yahoo.platform.yui.compressor.JavaScriptCompressor;
 
@@ -32,14 +32,14 @@ public class MinifyThread extends MessageHandler {
 	private final Gson gson;
 
 	@Inject
-	public MinifyThread(@ThreadGroupMessageHandling ThreadGroup g, AmazonSQSAsync awsSQS, AmazonS3 awsS3, @QueueMinify String awsQueueMinify, @QueueGZIP String awsQueueGzip) {
+	public MinifyThread(GsonBuilder gsonBuilder, @ThreadGroupMessageHandling ThreadGroup g, AmazonSQSAsync awsSQS, AmazonS3 awsS3, @QueueMinify String awsQueueMinify, @QueueGZIP String awsQueueGzip) {
 		super(g, awsSQS, awsQueueMinify);
 
 		this.awsS3 = awsS3;
 		this.awsSQS = awsSQS;
 		this.awsQueueGzip = awsQueueGzip;
 
-		this.gson = GsonUtils.newGson();
+		this.gson = gsonBuilder.create();
 	}
 
 	@Override

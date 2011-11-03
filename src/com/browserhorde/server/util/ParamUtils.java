@@ -77,6 +77,23 @@ public final class ParamUtils {
 		return result;
 	}
 
+	public static <T extends Enum<T>> T asEnum(Class<T> clazz, String value) { 
+		return asEnum(clazz, value, null);
+	}
+	public static <T extends Enum<T>> T asEnum(Class<T> clazz, String value, T def) {
+		value = StringUtils.trimToNull(value);
+		if(value == null) {
+			return def;
+		}
+
+		T result = def;
+		try {
+			result = Enum.valueOf(clazz, value);
+		}
+		catch(Throwable t) {}
+		return result;
+	}
+	
 	public static <T> T coalesce(T ... ts) {
 		for(T t : ts) {
 			if(t == null) {

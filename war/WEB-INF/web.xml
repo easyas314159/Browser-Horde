@@ -55,11 +55,11 @@
   	</init-param>
   	<init-param>
   		<param-name>cors.supportedHeaders</param-name>
-  		<param-value>Origin,Content-Type,Allow,Accept,X-Horde-Machine-Id</param-value>
+  		<param-value>Accept,Allow,Content-Type,If-Modified-Since,If-None-Match,Origin,X-Horde-Machine-Id</param-value>
   	</init-param>
   	<init-param>
   		<param-name>cors.exposedHeaders</param-name>
-  		<param-value>Content-Type,Retry-After,X-Horde-Machine-Id,X-RateLimit,X-RateLimit-Remaining,X-RateLimit-Reset</param-value>
+  		<param-value>Retry-After,X-Horde-Machine-Id,X-RateLimit,X-RateLimit-Remaining,X-RateLimit-Reset</param-value>
   	</init-param>
   </filter>
   <filter-mapping>

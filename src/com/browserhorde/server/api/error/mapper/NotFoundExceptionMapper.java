@@ -6,17 +6,22 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
+import org.apache.log4j.Logger;
+
 import com.browserhorde.server.api.ApiStatus;
-import com.browserhorde.server.api.error.NoTasksException;
 import com.google.gson.JsonNull;
+import com.sun.jersey.api.NotFoundException;
 
 @Provider
 @Produces({MediaType.APPLICATION_JSON})
-public final class NoTasksExceptionMapper implements ExceptionMapper<NoTasksException> {
+public final class NotFoundExceptionMapper implements ExceptionMapper<NotFoundException> {
+	private final Logger log = Logger.getLogger(getClass());
+
 	@Override
-	public Response toResponse(NoTasksException ex) {
+	public Response toResponse(NotFoundException ex) {
+		log.info("Not Found", ex);
 		return Response
-			.status(ApiStatus.NO_CONTENT)
+			.status(ApiStatus.NOT_FOUND)
 			.entity(new JsonNull())
 			.build()
 			;

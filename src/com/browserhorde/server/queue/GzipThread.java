@@ -13,11 +13,11 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.model.Message;
-import com.browserhorde.server.gson.GsonUtils;
 import com.browserhorde.server.inject.QueueGZIP;
 import com.browserhorde.server.inject.ThreadGroupMessageHandling;
 import com.browserhorde.server.util.ConcurrentPipeStream;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 
 public class GzipThread extends MessageHandler {
@@ -27,11 +27,11 @@ public class GzipThread extends MessageHandler {
 	private final Gson gson;
 	
 	@Inject
-	public GzipThread(@ThreadGroupMessageHandling ThreadGroup g, AmazonSQSAsync awsSQS, AmazonS3 awsS3, @QueueGZIP String awsQueueGzip) {
+	public GzipThread(GsonBuilder gsonBuilder, @ThreadGroupMessageHandling ThreadGroup g, AmazonSQSAsync awsSQS, AmazonS3 awsS3, @QueueGZIP String awsQueueGzip) {
 		super(g, awsSQS, awsQueueGzip);
 
 		this.awsS3 = awsS3;
-		this.gson = GsonUtils.newGson();
+		this.gson = gsonBuilder.create();
 	}
 
 	@Override
@@ -71,6 +71,8 @@ public class GzipThread extends MessageHandler {
 		IOUtils.closeQuietly(outGzip);
 
 		metadata.setContentLength(outCount.getByteCount());
+		metadata.setHeader("Vary", "Accept-Encoding");
+
 		awsS3.putObject(bucket, key, pipe.getInputStream(), metadata);
 		awsS3.setObjectAcl(bucket, key, acl);
 	}

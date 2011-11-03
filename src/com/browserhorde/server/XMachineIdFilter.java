@@ -50,6 +50,7 @@ public class XMachineIdFilter extends HttpFilter implements Filter {
 			HttpHeaders.IF_MODIFIED_SINCE
 		};
 
+		// FIXME: This needs some fixing
 		String machineId = null;
 		boolean userIsNice = true;
 		Set<String> machineIds = new HashSet<String>();
@@ -66,9 +67,6 @@ public class XMachineIdFilter extends HttpFilter implements Filter {
 				machineId = machineIds.iterator().next();
 				break;
 			}
-			else {
-				userIsNice = false;
-			}
 			machineIds.clear();
 		}
 		if(machineId == null) {
@@ -78,13 +76,9 @@ public class XMachineIdFilter extends HttpFilter implements Filter {
 		req = new ModifyHeaderWrapper(req)
 			.withHeader(ApiHeaders.X_HORDE_MACHINE_ID, machineId);
 
-		// TODO: track machine metrics
-
 		rsp.setHeader(ApiHeaders.X_HORDE_MACHINE_ID, machineId);
-		if(!userIsNice) {
-			rsp.setHeader(HttpHeaders.ETAG, machineId);
-			rsp.setHeader(HttpHeaders.LAST_MODIFIED, machineId);
-		}
+		rsp.setHeader(HttpHeaders.ETAG, machineId);
+		rsp.setHeader(HttpHeaders.LAST_MODIFIED, machineId);
 
 		chain.doFilter(req, rsp);
 	}

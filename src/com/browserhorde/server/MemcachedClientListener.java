@@ -10,11 +10,16 @@ import javax.servlet.ServletContextListener;
 
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactory;
-import net.spy.memcached.DefaultConnectionFactory;
+import net.spy.memcached.ConnectionFactoryBuilder;
+import net.spy.memcached.ConnectionFactoryBuilder.Locator;
+import net.spy.memcached.ConnectionFactoryBuilder.Protocol;
+import net.spy.memcached.FailureMode;
 import net.spy.memcached.MemcachedClient;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+
+import com.browserhorde.server.util.ParamUtils;
 
 public class MemcachedClientListener implements ServletContextListener {
 	public static final String MEMCACHED_NAME = MemcachedClient.class.getName();
@@ -25,25 +30,26 @@ public class MemcachedClientListener implements ServletContextListener {
 	public void contextInitialized(ServletContextEvent evt) {
 		ServletContext context = evt.getServletContext();
 
-		String connectionFactoryClassName = context.getInitParameter(ServletInitOptions.MEMCACHED_CONNECTION_FACTORY);
-		connectionFactoryClassName = StringUtils.trimToNull(connectionFactoryClassName);
+		ConnectionFactoryBuilder builder = new ConnectionFactoryBuilder();
 
-		ConnectionFactory connectionFactory = null;
-		if(connectionFactoryClassName != null) {
-			try {
-				ClassLoader loader = ConnectionFactory.class.getClassLoader();
-				Class<?> connectionFactoryClass = loader.loadClass(connectionFactoryClassName);
-				connectionFactory = connectionFactoryClass
-					.asSubclass(ConnectionFactory.class).newInstance();
-			}
-			catch(Throwable t) {
-				log.warn("Failed to instantiate memcached connection factory", t);
-			}
-		}
-		if(connectionFactory == null) {
-			log.info("Using default memcached connection factory");
-			connectionFactory = new DefaultConnectionFactory();
-		}
+		//builder.setHashAlg(HashAlgorithm.KETAMA_HASH);
+		builder.setFailureMode(
+				ParamUtils.asEnum(
+						FailureMode.class,
+						context.getInitParameter(ServletInitOptions.MEMCACHED_FAILURE_MODE),
+						FailureMode.Retry
+					)
+			);
+		builder.setLocatorType(Locator.CONSISTENT);
+		builder.setProtocol(
+				ParamUtils.asEnum(
+						Protocol.class,
+						context.getInitParameter(ServletInitOptions.MEMCACHED_PROTOCOL),
+						Protocol.TEXT
+					)
+			);
+
+		ConnectionFactory connectionFactory = builder.build();
 
 		List<InetSocketAddress> clusterAddress = null;
 		String cluster = context.getInitParameter(ServletInitOptions.MEMCACHED_CLUSTER);

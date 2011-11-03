@@ -13,12 +13,14 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
@@ -44,12 +46,12 @@ import com.browserhorde.server.api.consumes.ModifyScriptRequest;
 import com.browserhorde.server.api.error.ForbiddenException;
 import com.browserhorde.server.entity.Script;
 import com.browserhorde.server.entity.User;
-import com.browserhorde.server.gson.GsonUtils;
 import com.browserhorde.server.inject.QueueGZIP;
 import com.browserhorde.server.inject.QueueMinify;
 import com.browserhorde.server.queue.ProcessObject;
 import com.browserhorde.server.security.Roles;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.sun.jersey.api.NotFoundException;
@@ -59,6 +61,8 @@ import com.sun.jersey.api.NotFoundException;
 public class ScriptResource {
 	private final Logger log = Logger.getLogger(getClass());
 
+	@Inject private GsonBuilder gsonBuilder;
+	
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET) private String awsS3Bucket;
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET_ENDPOINT) private String awsS3BucketEndpoint;
 
@@ -117,7 +121,8 @@ public class ScriptResource {
 	@Produces({"text/javascript", "application/javascript", "application/x-javascript"})
 	public Response getScriptContent(
 			@Context HttpHeaders headers,
-			@PathParam("id") String id
+			@PathParam("id") String id,
+			@QueryParam("debug") @DefaultValue("false") Boolean debug
 		) {
 		Script script = entityManager.find(Script.class, id);
 		if(script == null) {
@@ -152,7 +157,7 @@ public class ScriptResource {
 		}
 
 		String key = script.getId();
-		if(!script.isDebug()) {
+		if(!debug) {
 			key += ".min";
 		}
 		if(acceptedEncodings.contains("gzip")) {
@@ -199,7 +204,6 @@ public class ScriptResource {
 		script.setOwner(user);
 		script.setName(modifyScript.name);
 		script.setDescription(modifyScript.description);
-		script.setDebug(modifyScript.debug);
 
 		entityManager.persist(script);
 
@@ -235,7 +239,6 @@ public class ScriptResource {
 		// TODO: This should perform some sort of patch instead of direct overwrite
 		script.setName(modifyScript.name);
 		script.setDescription(modifyScript.description);
-		script.setDebug(modifyScript.debug);
 
 		entityManager.merge(script);
 
@@ -313,7 +316,7 @@ public class ScriptResource {
 		awsS3.putObject(putRequest);
 		awsS3.setObjectAcl(bucket, id, CannedAccessControlList.PublicRead);
 
-		Gson gson = GsonUtils.newGson();
+		Gson gson = gsonBuilder.create();
 
 		ProcessObject gz = new ProcessObject(bucket, id);
 		awsSQS.sendMessageAsync(new SendMessageRequest(awsSqsGzip, gson.toJson(gz)));

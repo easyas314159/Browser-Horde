@@ -8,6 +8,7 @@ import javax.ws.rs.ext.Provider;
 
 import com.browserhorde.server.api.ApiStatus;
 import com.browserhorde.server.api.error.ForbiddenException;
+import com.google.gson.JsonNull;
 
 @Provider
 @Produces({MediaType.APPLICATION_JSON})
@@ -16,6 +17,7 @@ public final class ForbiddenExceptionMapper implements ExceptionMapper<Forbidden
 	public Response toResponse(ForbiddenException ex) {
 		return Response
 			.status(ApiStatus.FORBIDDEN)
+			.entity(new JsonNull())
 			.build()
 			;
 	}

@@ -9,6 +9,8 @@ import javax.ws.rs.ext.Provider;
 
 import org.apache.log4j.Logger;
 
+import com.google.gson.JsonNull;
+
 @Provider
 @Produces({MediaType.APPLICATION_JSON})
 public class ThrowableMapper implements ExceptionMapper<Throwable> {
@@ -19,7 +21,7 @@ public class ThrowableMapper implements ExceptionMapper<Throwable> {
 		log.error("Something Broke!", t);
 		return Response
 			.status(Status.INTERNAL_SERVER_ERROR)
-			.entity(null)
+			.entity(new JsonNull())
 			.build();
 	}
 }
