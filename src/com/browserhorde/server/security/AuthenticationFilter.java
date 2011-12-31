@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 
+import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Query;
@@ -41,9 +42,15 @@ public class AuthenticationFilter extends HttpFilter {
 
 	private final Logger log = Logger.getLogger(getClass());
 
-	@Inject private MemcachedClient memcached;
-	@Inject private EntityManagerFactory entityManagerFactory;
+	private final EntityManagerFactory entityManagerFactory;
+	private final MemcachedClient memcached;
 
+	@Inject
+	public AuthenticationFilter(EntityManagerFactory entityManagerFactory, @Nullable MemcachedClient memcached) {
+		this.entityManagerFactory = entityManagerFactory;
+		this.memcached = memcached;
+	}
+	
 	@Override
 	public void destroy() {
 	}
@@ -96,7 +103,7 @@ public class AuthenticationFilter extends HttpFilter {
 
 		User user = null;
 		String userIdKey = NS_USERID_BY_EMAIL + DigestUtils.md5Hex(email);
-		String userId = memcached.get(userIdKey, new StringTranscoder());
+		String userId = memcached == null ? null : memcached.get(userIdKey, new StringTranscoder());
 
 		if(userId == null) {
 			Query query = entityManager.createQuery(
@@ -108,7 +115,9 @@ public class AuthenticationFilter extends HttpFilter {
 			List<User> users = query.getResultList();
 			if(users.size() == 1) {
 				user = users.get(0);
-				memcached.set(userIdKey, 0, user.getId(), new StringTranscoder());
+				if(memcached != null) {
+					memcached.set(userIdKey, 0, user.getId(), new StringTranscoder());
+				}
 			}
 			else if(users.size() > 1) {
 				log.fatal(String.format("Duplicate e-mail \'%s\' in the user table!", email));
@@ -131,12 +140,14 @@ public class AuthenticationFilter extends HttpFilter {
 			);
 	
 		String key = NS_BASIC + DigestUtils.md5Hex(ArrayUtils.addAll(ip.getAddress(), email.getBytes()));
-		byte[] cachedHash = memcached.get(key, new GsonTranscoder<byte[]>(byte[].class));
+		byte[] cachedHash = memcached == null ? null : memcached.get(key, new GsonTranscoder<byte[]>(byte[].class));
 	 
 		if(cachedHash == null) {
 			if(user.matchesPassword(password)) {
 				// BCrypt is an expensive operation so lets cache the results on the first successful auth from the ip address
-				memcached.set(key, 600, authHash, tc);
+				if(memcached != null) {
+					memcached.set(key, 600, authHash, tc);
+				}
 				return user;
 			}
 		}

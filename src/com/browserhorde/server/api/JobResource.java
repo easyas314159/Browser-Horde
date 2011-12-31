@@ -22,7 +22,6 @@ import com.browserhorde.server.api.consumes.ModifyJobRequest;
 import com.browserhorde.server.api.error.ForbiddenException;
 import com.browserhorde.server.entity.Job;
 import com.browserhorde.server.entity.Script;
-import com.browserhorde.server.entity.Task;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.security.Roles;
 import com.google.inject.Inject;
@@ -63,29 +62,6 @@ public class JobResource {
 			.entity(job)
 			.build()
 			;
-	}
-
-	@GET
-	@Path("{id}/tasks")
-	@RolesAllowed(Roles.REGISTERED)
-	public Response listJobTasks(@Context SecurityContext sec, @PathParam("id") String id) {
-		Object response = null;
-		User user = (User)sec.getUserPrincipal();
-
-		Job job = entityManager.find(Job.class, id);
-		if(job == null || !job.isOwnedBy(user)) {
-			throw new ForbiddenException();
-		}
-		else {
-			Query query = entityManager.createQuery(
-					"select * from " + Task.class.getName()
-					+ " where job=:job"
-				);
-			query.setParameter("job", job);
-			response = query.getResultList();
-		}
-
-		return Response.ok(response).build();
 	}
 
 	@POST

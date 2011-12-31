@@ -3,6 +3,7 @@ package com.browserhorde.server;
 import java.io.IOException;
 import java.net.InetAddress;
 
+import javax.annotation.Nullable;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
@@ -35,9 +36,15 @@ public class XRateLimitFilter extends HttpFilter {
 	private int rateLimit;
 	private int rateLimitTimeout;
 
-	@Inject private GsonBuilder gsonBuilder;
-	@Inject private MemcachedClient memcached;
+	private final GsonBuilder gsonBuilder;
+	private final MemcachedClient memcached;
 
+	@Inject
+	public XRateLimitFilter(GsonBuilder gsonBuilder, @Nullable MemcachedClient memcached) {
+		this.gsonBuilder = gsonBuilder;
+		this.memcached = memcached;
+	}
+	
 	@Override
 	public void init(FilterConfig config) throws ServletException {
 		ServletContext context = config.getServletContext();
@@ -51,6 +58,11 @@ public class XRateLimitFilter extends HttpFilter {
 
 	@Override
 	public void doFilter(HttpServletRequest req, HttpServletResponse rsp, FilterChain chain) throws IOException, ServletException {
+		if(memcached == null) {
+			chain.doFilter(req, rsp);
+			return;
+		}
+
 		InetAddress ip = InetAddress.getByName(req.getRemoteAddr());
 		String key = NS_RATE_LIMIT + DigestUtils.md5Hex(ip.getAddress());
 

@@ -24,7 +24,7 @@ public class WebApplicationExceptionMapper implements ExceptionMapper<WebApplica
 		if(rsp.getStatus() == ApiStatus.FORBIDDEN.getStatusCode()) {
 			return Response
 				.status(ApiStatus.UNAUTHORIZED)
-				.header(HttpHeaders.WWW_AUTHENTICATE, "Basic")
+				.header(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"horde\"")
 				.header(HttpHeaders.WWW_AUTHENTICATE, "OAuth")
 				.entity(new JsonNull())
 				.build();

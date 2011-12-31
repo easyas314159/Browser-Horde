@@ -6,7 +6,6 @@ import com.browserhorde.server.api.readers.JsonReader;
 import com.google.gson.annotations.Expose;
 
 public class ModifyTaskRequest {
-	@Expose public String job;
 	@Expose public Integer timeout;
 	@Expose public Boolean active;
 

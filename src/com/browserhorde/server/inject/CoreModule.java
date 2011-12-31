@@ -17,11 +17,11 @@ import net.spy.memcached.MemcachedClient;
 import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.log4j.Logger;
 
+import com.browserhorde.server.ErrorFilter;
 import com.browserhorde.server.ExecutorServiceListener;
 import com.browserhorde.server.MemcachedClientListener;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.XMachineIdFilter;
-import com.browserhorde.server.XRateLimitFilter;
 import com.browserhorde.server.XRuntime;
 import com.browserhorde.server.cors.PreflightHijackFilter;
 import com.browserhorde.server.security.AuthenticationFilter;
@@ -98,9 +98,10 @@ public class CoreModule extends JerseyServletModule {
 
 	private void bindFilters() {
 		filter("/*").through(XRuntime.class);
+		filter("/*").through(ErrorFilter.class);
 
 		// FIXME: Rate limiter is currently broken
-		filter("/*").through(XRateLimitFilter.class);
+		//filter("/*").through(XRateLimitFilter.class);
 
 		filter("/*").through(new PreflightHijackFilter());
 
@@ -141,8 +142,14 @@ public class CoreModule extends JerseyServletModule {
 			.toInstance(executorService);
 
 		MemcachedClient memcachedClient = (MemcachedClient)context.getAttribute(MemcachedClientListener.MEMCACHED_NAME);
-		bind(MemcachedClient.class)
-			.toInstance(memcachedClient);
+		if(memcachedClient == null) {
+			bind(MemcachedClient.class)
+				.toProvider(Providers.of((MemcachedClient)null));
+		}
+		else {
+			bind(MemcachedClient.class)
+				.toInstance(memcachedClient);			
+		}
 
 		bindNamed(String.class, ServletInitOptions.AWS_S3_BUCKET, awsS3Bucket);
 		bindNamed(String.class, ServletInitOptions.AWS_S3_BUCKET_ENDPOINT, ParamUtils.asString(p.getProperty(ServletInitOptions.AWS_S3_BUCKET_ENDPOINT), awsS3BucketEndpoint));
