@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import net.spy.memcached.CASMutation;
+import net.spy.memcached.CASMutator;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.transcoders.Transcoder;
 
@@ -20,7 +21,6 @@ import org.apache.log4j.Logger;
 
 import com.browserhorde.server.api.ApiHeaders;
 import com.browserhorde.server.gson.GsonTranscoder;
-import com.browserhorde.server.util.FixedCASMutator;
 import com.browserhorde.server.util.ParamUtils;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
@@ -70,7 +70,7 @@ public class XRateLimitFilter extends HttpFilter {
 				gsonBuilder,
 				RateLimit.class
 			);
-		FixedCASMutator<RateLimit> mutator = new FixedCASMutator<RateLimit>(
+		CASMutator<RateLimit> mutator = new CASMutator<RateLimit>(
 				memcached, tc
 			);
 
@@ -79,8 +79,6 @@ public class XRateLimitFilter extends HttpFilter {
 
 		RateLimitMutation rateLimitMutation = new RateLimitMutation(rateLimit, timeout);
 		try {
-			// FIXME: Something is wrong with the handling of timeouts
-			// Timeouts are being reset to 0 after the initial set because of a defect in CASMutator
 			RateLimit lim = memcached.get(key, tc);
 			if(lim == null) {
 				lim = new RateLimit(rateLimit, timeout);
