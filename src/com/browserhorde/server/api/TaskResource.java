@@ -6,10 +6,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
 
 import javax.annotation.security.RolesAllowed;
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -24,16 +26,17 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.http.client.utils.URIUtils;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.browserhorde.server.ServletInitOptions;
@@ -52,7 +55,8 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.sun.jersey.api.NotFoundException;
 
-@Path("tasks")
+//@Path("tasks")
+@Path("jobs/{job_id}/tasks") // TODO: This might be more appropriate since tasks always belong to a job
 @Produces({MediaType.APPLICATION_JSON})
 public class TaskResource {
 	@Inject private GsonBuilder gsonBuilder;
@@ -70,17 +74,34 @@ public class TaskResource {
 
 	@GET
 	@RolesAllowed(Roles.REGISTERED)
-	public Response listTasks(@Context SecurityContext sec) {
-		throw new NotImplementedException();
+	public Response listTasks(@Context SecurityContext sec, @PathParam("job_id") String id) {
+		Object response = null;
+		User user = (User)sec.getUserPrincipal();
+
+		Job job = entityManager.find(Job.class, id);
+		if(job == null || !job.isOwnedBy(user)) {
+			throw new ForbiddenException();
+		}
+		else {
+			Query query = entityManager.createQuery(
+					"select * from " + Task.class.getName()
+					+ " where job=:job"
+				);
+			query.setParameter("job", job);
+			response = query.getResultList();
+		}
+
+		return Response.ok(response).build();
 	}
 
 	@GET
-	@Path("{id}")
+	@Path("{task_id}")
 	public Response getTask(
 			@Context SecurityContext sec,
-			@PathParam("id") String id
+			@PathParam("job_id") String jobId,
+			@PathParam("task_id") String taskId
 		) {
-		Task task = entityManager.find(Task.class, id);
+		Task task = entityManager.find(Task.class, taskId);
 		if(task == null) {
 			throw new NotFoundException();
 		}
@@ -93,27 +114,58 @@ public class TaskResource {
 	}
 
 	@GET
-	@Path("{id}/data")
+	@Path("{task_id}/data")
 	public Response getTaskData(
 			@HeaderParam(HttpHeaders.IF_MODIFIED_SINCE) Date modifiedSince,
-			@PathParam("id") String id
+			@HeaderParam(HttpHeaders.USER_AGENT) String userAgent,
+			@PathParam("job_id") String jobId,
+			@PathParam("task_id") String taskId
 		) {
 
-		Task task = entityManager.find(Task.class, id);
+		Task task = entityManager.find(Task.class, taskId);
 		if(task == null) {
 			throw new NotFoundException();
 		}
 
 		String key = task.getAttachmentKey();
-		try {
-			URI uriS3 = URIUtils.createURI("http", awsS3BucketEndpoint, -1, key, null, null);
-			return Response
-				.status(ApiStatus.FOUND)
-				.location(uriS3)
-				.build()
+
+		// TODO: This needs switch between compressed and uncompresseed versions
+
+		if(userAgent.indexOf("AppleWebKit") < 0) {
+			try {
+				URI uriS3 = URIUtils.createURI("http", awsS3BucketEndpoint, -1, key, null, null);
+				return Response
+					.status(ApiStatus.FOUND)
+					.location(uriS3)
+					.build()
+					;
+			} catch(URISyntaxException ex) {
+				throw new WebApplicationException(ex);
+			}
+		}
+		// HACK: This works around webkit bug 57600
+		// https://bugs.webkit.org/show_bug.cgi?id=57600
+		else {
+			S3Object object = awsS3.getObject(awsS3Bucket, key);
+			ObjectMetadata metadata = object.getObjectMetadata();
+
+			Date lastModified = metadata.getLastModified();
+			if(modifiedSince != null && lastModified != null && lastModified.after(modifiedSince)) {
+				return Response
+					.status(ApiStatus.NOT_MODIFIED)
+					.build();
+			}
+
+			ResponseBuilder rb = Response
+				.status(ApiStatus.OK)
 				;
-		} catch(URISyntaxException ex) {
-			throw new WebApplicationException(ex);
+			for(Map.Entry<String, Object> entry : metadata.getRawMetadata().entrySet()) {
+				rb.header(entry.getKey(), entry.getValue());
+			}
+
+			return rb
+				.entity(object.getObjectContent())
+				.build();
 		}
 	}
 
@@ -122,11 +174,12 @@ public class TaskResource {
 	public Response createTask(
 			@Context SecurityContext sec,
 			@Context UriInfo ui,
+			@PathParam("job_id") String jobId,
 			ModifyTaskRequest taskCreate
 		) {
 
 		User user = (User)sec.getUserPrincipal();
-		Job job = entityManager.find(Job.class, taskCreate.job);
+		Job job = entityManager.find(Job.class, jobId);
 
 		if(job == null || !job.isOwnedBy(user)) {
 			throw new ForbiddenException();
@@ -155,22 +208,23 @@ public class TaskResource {
 	}
 
 	@POST
-	@Path("{id}")
+	@Path("{task_id}")
 	@RolesAllowed(Roles.REGISTERED)
 	public Response updateTask(
 			@Context SecurityContext sec,
-			@PathParam("id") String id,
+			@PathParam("job_id") String jobId,
+			@PathParam("task_id") String taskId,
 			ModifyTaskRequest modifyTask
 		) {
 
 		User user = (User)sec.getUserPrincipal();
-		Task task = entityManager.find(Task.class, id);
+		Task task = entityManager.find(Task.class, taskId);
 		if(task == null || !task.isOwnedBy(user)) {
 			throw new ForbiddenException();
 		}
 
-		if(!task.getJob().getId().equalsIgnoreCase(modifyTask.job)) {
-			Job job = entityManager.find(Job.class, modifyTask.job);
+		if(!task.getJob().getId().equalsIgnoreCase(jobId)) {
+			Job job = entityManager.find(Job.class, jobId);
 			if(job != null && job.isOwnedBy(user)) {
 				task.setJob(job);
 			}
@@ -189,17 +243,18 @@ public class TaskResource {
 	}
 
 	@PUT
-	@Path("{id}")
+	@Path("{task_id}")
 	@Consumes({MediaType.APPLICATION_JSON})
 	@RolesAllowed(Roles.REGISTERED)
 	public Response storeTaskData(
 			@Context SecurityContext sec,
-			@PathParam("id") String id,
+			@PathParam("job_id") String jobId,
+			@PathParam("task_id") String taskId,
 			JsonElement source
 		) {
 		User user = (User)sec.getUserPrincipal();
 
-		Task task = entityManager.find(Task.class, id);
+		Task task = entityManager.find(Task.class, taskId);
 		if(task == null || !task.isOwnedBy(user)) {
 			throw new ForbiddenException();
 		}
@@ -233,12 +288,16 @@ public class TaskResource {
 	}
 
 	@DELETE
-	@Path("{id}")
+	@Path("{task_id}")
 	@RolesAllowed(Roles.REGISTERED)
-	public Response deleteTask(@Context SecurityContext sec, @PathParam("id") String id) {
+	public Response deleteTask(
+			@Context SecurityContext sec,
+			@PathParam("job_id") String jobId,
+			@PathParam("task_id") String taskId
+		) {
 		User user = (User)sec.getUserPrincipal();
 
-		Task task = entityManager.find(Task.class, id);
+		Task task = entityManager.find(Task.class, taskId);
 		if(task == null || !task.isOwnedBy(user)) {
 			throw new ForbiddenException();
 		}

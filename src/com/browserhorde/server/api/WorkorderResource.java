@@ -1,5 +1,9 @@
 package com.browserhorde.server.api;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.Calendar;
 import java.util.Date;
@@ -17,6 +21,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.CacheControl;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -26,10 +31,16 @@ import javax.ws.rs.core.SecurityContext;
 import net.spy.memcached.MemcachedClient;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.sqs.AmazonSQSAsync;
+import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.api.consumes.WorkorderCheckin;
 import com.browserhorde.server.api.error.NoTasksException;
 import com.browserhorde.server.api.produces.WorkorderCheckout;
@@ -41,7 +52,11 @@ import com.browserhorde.server.entity.User;
 import com.browserhorde.server.gson.GsonTranscoder;
 import com.browserhorde.server.inject.QueueStats;
 import com.browserhorde.server.util.ParamUtils;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.sun.jersey.api.NotFoundException;
 
 @Path("workorders")
@@ -52,8 +67,12 @@ public class WorkorderResource {
 
 	private final Logger log = Logger.getLogger(getClass());
 
+	@Inject private AmazonS3 awsS3;
 	@Inject private AmazonSQSAsync awsSQS;
 
+	@Inject private GsonBuilder gsonBuilder;
+	
+	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET) private String awsS3Bucket;
 	@Inject @QueueStats private String awsQueueStats;
 
 	@Inject private Random rs;
@@ -74,17 +93,8 @@ public class WorkorderResource {
 	@GET
 	public Response checkout(
 			@Context SecurityContext sec,
-			@HeaderParam(ApiHeaders.X_HORDE_MACHINE_ID) String machineId
-		) {
-		return checkoutForJob(sec, machineId, null);
-	}
-
-	@GET
-	@Path("{id}")
-	public Response checkoutForJob(
-			@Context SecurityContext sec,
 			@HeaderParam(ApiHeaders.X_HORDE_MACHINE_ID) String machineId,
-			@PathParam("id") String id
+			@QueryParam("job") String id
 		) {
 		Object entity = null;
 
@@ -94,9 +104,12 @@ public class WorkorderResource {
 
 		id = StringUtils.trimToNull(id);
 		Job job = (id == null) ? randomJob() : entityManager.find(Job.class, id);
-		Task task = randomTask(job);
+		if(job == null) {
+			throw new NoTasksException();
+		}
 
 		Date expires = null;
+		Task task = randomTask(job);
 		if(task == null) {
 			throw new NoTasksException();
 		}
@@ -117,8 +130,6 @@ public class WorkorderResource {
 
 			allWorkorders.put(wo, entry, expires);
 		}
-
-		entityManager.close();
 
 		CacheControl cacheControl = new CacheControl();
 		cacheControl.setNoCache(true);
@@ -157,12 +168,14 @@ public class WorkorderResource {
 					// TODO: Bail early
 				}
 				else {
-					log.debug("Checkin success");
-
-					log.debug(checkin.getData());
 					// TODO: Pass off to data validation
 					// All the parameters check out so this is probably the correct result
 					// TODO: Push job details to statistics queue
+
+					
+					
+					String workorderKey = task.getAttachmentKey() + "/" + checkin.getId();
+					uploadResult(awsS3Bucket, workorderKey, checkin.getData());
 				}
 			}
 			else {
@@ -174,7 +187,7 @@ public class WorkorderResource {
 			.status(ApiStatus.ACCEPTED)
 			.build();
 	}
-
+	
 	@DELETE
 	@Path("{id}")
 	public Response cancelWorkorder(
@@ -286,6 +299,27 @@ public class WorkorderResource {
 		return null;
 	}
 
+	private void uploadResult(String bucket, String key, JsonElement el) {
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		OutputStreamWriter writer = new OutputStreamWriter(output, Charset.forName("UTF-8"));
+
+		Gson gson = gsonBuilder.create();
+		gson.toJson(el, writer);
+
+		IOUtils.closeQuietly(writer);
+
+		byte[] data = output.toByteArray();
+		
+		ObjectMetadata metadata = new ObjectMetadata();
+		metadata.setContentType("application/json");
+		metadata.setLastModified(new Date());
+		metadata.setContentLength(data.length);
+
+		ByteArrayInputStream input = new ByteArrayInputStream(data);
+		PutObjectRequest putRequest = new PutObjectRequest(bucket, key, input, metadata);
+		PutObjectResult putResult = awsS3.putObject(putRequest);
+	}
+	
 	private static class WorkorderEntry {
 		public String userId;
 		public String machineId;

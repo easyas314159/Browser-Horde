@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -32,7 +33,7 @@ public class XMachineIdFilter extends HttpFilter implements Filter {
 
 	private static final String NS_MACHINE_ID = DigestUtils.md5Hex("machine_id");
 
-	@Inject private MemcachedClient memcached;
+	@Inject @Nullable private MemcachedClient memcached;
 
 	@Override
 	public void init(FilterConfig arg0) throws ServletException {
@@ -46,7 +47,6 @@ public class XMachineIdFilter extends HttpFilter implements Filter {
 		// TODO: Maybe tie this into auth so we can track the number of machines each user has
 		final String checkHeaders[] = new String[]{
 			ApiHeaders.X_HORDE_MACHINE_ID,
-			HttpHeaders.IF_NONE_MATCH,
 			HttpHeaders.IF_MODIFIED_SINCE
 		};
 
@@ -77,7 +77,6 @@ public class XMachineIdFilter extends HttpFilter implements Filter {
 			.withHeader(ApiHeaders.X_HORDE_MACHINE_ID, machineId);
 
 		rsp.setHeader(ApiHeaders.X_HORDE_MACHINE_ID, machineId);
-		rsp.setHeader(HttpHeaders.ETAG, machineId);
 		rsp.setHeader(HttpHeaders.LAST_MODIFIED, machineId);
 
 		chain.doFilter(req, rsp);

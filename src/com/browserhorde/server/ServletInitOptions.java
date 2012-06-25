@@ -18,6 +18,9 @@ public final class ServletInitOptions {
 	public static final String MEMCACHED_FAILURE_MODE = "HORDE_MEMCACHED_FAILURE_MODE";
 	public static final String MEMCACHED_PROTOCOL = "HORDE_MEMCACHED_PROTOCOL";
 
+	// Stripe
+	public static final String STRIPE_API_KEY = "STRIPE_API_KEY";
+
 	// Amazon Web Services - General
 	public static final String AWS_ACCESS_KEY = "AWS_ACCESS_KEY_ID";
 	public static final String AWS_SECRET_KEY = "AWS_SECRET_KEY";
