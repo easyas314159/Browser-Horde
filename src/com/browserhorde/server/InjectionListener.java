@@ -64,8 +64,7 @@ public class InjectionListener implements ServletContextListener {
 				Stage.PRODUCTION,
 				new CoreModule(context),
 				new GsonModule(),
-				new AmazonWebServicesModule(awsCredentials),
-				new QueueModule()
+				new AmazonWebServicesModule(awsCredentials)
 			);
 		return injector;
 	}

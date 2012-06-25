@@ -26,15 +26,6 @@ public class Configurator implements ServletContextListener {
 
 		try {
 			TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-
-			Thread threadMinify = injector.getInstance(MinifyThread.class);
-			Thread threadGzip = injector.getInstance(GzipThread.class);
-
-			threadMinify.start();
-			threadGzip.start();
-
-			context.setAttribute(THREAD_MINIFY, threadMinify);
-			context.setAttribute(THREAD_GZIP, threadGzip);
 		}
 		catch(Throwable t) {
 			log.fatal("BOOM!", t);
@@ -43,14 +34,5 @@ public class Configurator implements ServletContextListener {
 	@Override
 	public void contextDestroyed(ServletContextEvent event) {
 		ServletContext context = event.getServletContext();
-
-		MessageHandler threadGzip = (MessageHandler)context.getAttribute(THREAD_GZIP);
-		MessageHandler threadMinify = (MessageHandler)context.getAttribute(THREAD_MINIFY);
-
-		threadGzip.shutdown();
-		threadMinify.shutdown();
-
-		context.setAttribute(THREAD_GZIP, null);
-		context.setAttribute(THREAD_MINIFY, null);
 	}
 }
