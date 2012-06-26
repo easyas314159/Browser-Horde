@@ -73,19 +73,39 @@ public class ScriptResource {
 
 	@GET
 	@RolesAllowed(Roles.REGISTERED)
-	public Response listScripts(@Context SecurityContext sec) {
-		Object entity = null;
+	public Response listScripts(@Context SecurityContext sec, @QueryParam("q") @DefaultValue("") String search) {
+		throw new NotImplementedException();
+	}
 
-		// TODO: This needs to handle some pagination
-		Query query = entityManager.createQuery(
-				"SELECT * FROM " + Script.class.getName()
-				+ " WHERE owner=:owner"
-			);
-		query.setParameter("owner", sec.getUserPrincipal());
+	@POST
+	@Consumes({MediaType.APPLICATION_JSON})
+	@RolesAllowed(Roles.REGISTERED)
+	public Response createScript(
+			@Context SecurityContext sec,
+			@Context UriInfo ui,
+			ModifyScriptRequest modifyScript
+		) {
+		User user = (User)sec.getUserPrincipal();
+		
+		Script script = new Script();
 
-		entity = query.getResultList();
+		script.setOwner(user);
+		script.setName(modifyScript.name);
+		script.setDescription(modifyScript.description);
 
-		return Response.ok(entity).build();
+		entityManager.persist(script);
+
+		URI location = ui.getAbsolutePathBuilder()
+			.path(script.getId())
+			.build()
+			;
+
+		return Response
+			.status(ApiStatus.CREATE)
+			.location(location)
+			.entity(script)
+			.build()
+			;
 	}
 
 	@GET
@@ -107,13 +127,84 @@ public class ScriptResource {
 			;
 	}
 
+	@POST
+	@Path("{id}")
+	@Consumes({MediaType.APPLICATION_JSON})
+	@RolesAllowed(Roles.REGISTERED)
+	public Response updateScript(
+			@Context SecurityContext sec,
+			@PathParam("id") String id,
+			ModifyScriptRequest modifyScript
+		) {
+		User user = (User)sec.getUserPrincipal();
+
+		Script script = entityManager.find(Script.class, id);
+		if(script == null || !script.isOwnedBy(user)) {
+			throw new ForbiddenException();
+		}
+
+		// TODO: This should perform some sort of patch instead of direct overwrite
+		script.setName(modifyScript.name);
+		script.setDescription(modifyScript.description);
+
+		entityManager.merge(script);
+
+		return Response
+			.status(ApiStatus.OK)
+			.entity(script)
+			.build()
+			;
+	}
+
+	@DELETE
+	@Path("{id}")
+	public Response deleteScript(@Context SecurityContext sec, @PathParam("id") String id) {
+		User user = (User)sec.getUserPrincipal();
+		Script script = entityManager.find(Script.class, id);
+
+		if(script == null || !script.isOwnedBy(user)) {
+			throw new ForbiddenException();
+		}
+		else {
+			// TODO: Only delete scripts with no dependencies on other jobs
+			// TODO: Do all of this either asynchronously or on a completely different server
+
+			ListObjectsRequest listObjects = new ListObjectsRequest()
+				.withBucketName(awsS3Bucket)
+				.withPrefix(script.getId());
+			while(true) {
+				ObjectListing listing = awsS3.listObjects(listObjects);
+
+				for(S3ObjectSummary summary : listing.getObjectSummaries()) {
+					awsS3.deleteObject(awsS3Bucket, summary.getKey());
+				}
+
+				String marker = listing.getMarker();
+				if(listing.isTruncated() || marker == null) {
+					break;
+				}
+				listObjects.setMarker(marker);
+			}
+			entityManager.remove(script);
+		}
+
+		return Response.status(ApiStatus.NO_CONTENT).build();
+	}
+
 	@GET
-	@Path("{id}.js")
+	@Path("{id}/rev")
+	public Response getRevisions(@PathParam("id") String id) {
+		throw new NotImplementedException();
+	}
+
+	@GET
+	@Path("{id}/js")
 	@Produces({"text/javascript", "application/javascript", "application/x-javascript"})
-	public Response getScriptContent(
+	public Response getSource(
 			@Context HttpHeaders headers,
 			@PathParam("id") String id,
-			@QueryParam("debug") @DefaultValue("false") Boolean debug
+			@QueryParam("d") @DefaultValue("false") Boolean debug
+			@QueryParam("v") @DefaultValue("") String version
 		) {
 		Script script = entityManager.find(Script.class, id);
 		if(script == null) {
@@ -168,83 +259,11 @@ public class ScriptResource {
 		}
 	}
 
-	// TODO: Refine file upload because multipart/form-data sucks
-	/*
-	New upload strategy:
-		-POST to create
-			-Create script object in SDB
-			-Create empty script file in S3
-		-PUT script contents
-			-Receive script and queue for processing
-			-return 202 ACCEPTED
-		-GET needs to return script version info and processing status info
-	*/
-
 	@POST
-	@Consumes({MediaType.APPLICATION_JSON})
-	@RolesAllowed(Roles.REGISTERED)
-	public Response createScript(
-			@Context SecurityContext sec,
-			@Context UriInfo ui,
-			ModifyScriptRequest modifyScript
-		) {
-		User user = (User)sec.getUserPrincipal();
-		
-		Script script = new Script();
-
-		script.setOwner(user);
-		script.setName(modifyScript.name);
-		script.setDescription(modifyScript.description);
-
-		entityManager.persist(script);
-
-		URI location = ui.getAbsolutePathBuilder()
-			.path(script.getId())
-			.build()
-			;
-
-		return Response
-			.status(ApiStatus.CREATE)
-			.location(location)
-			.entity(script)
-			.build()
-			;
-	}
-
-	@POST
-	@Path("{id}")
-	@Consumes({MediaType.APPLICATION_JSON})
-	@RolesAllowed(Roles.REGISTERED)
-	public Response updateScript(
-			@Context SecurityContext sec,
-			@PathParam("id") String id,
-			ModifyScriptRequest modifyScript
-		) {
-		User user = (User)sec.getUserPrincipal();
-
-		Script script = entityManager.find(Script.class, id);
-		if(script == null || !script.isOwnedBy(user)) {
-			throw new ForbiddenException();
-		}
-
-		// TODO: This should perform some sort of patch instead of direct overwrite
-		script.setName(modifyScript.name);
-		script.setDescription(modifyScript.description);
-
-		entityManager.merge(script);
-
-		return Response
-			.status(ApiStatus.OK)
-			.entity(script)
-			.build()
-			;
-	}
-
-	@PUT
 	@Path("{id}")
 	@Consumes({"text/javascript", "application/javascript", "application/x-javascript"})
 	@RolesAllowed(Roles.REGISTERED)
-	public Response storeScript(@Context SecurityContext sec, @PathParam("id") String id, InputStream source) {
+	public Response updateSource(@Context SecurityContext sec, @PathParam("id") String id, InputStream source) {
 		User user = (User)sec.getUserPrincipal();
 
 		Script script = entityManager.find(Script.class, id);
@@ -261,41 +280,6 @@ public class ScriptResource {
 		}
 
 		return Response.status(ApiStatus.ACCEPTED).build();
-	}
-
-	@DELETE
-	@Path("{id}")
-	public Response deleteScript(@Context SecurityContext sec, @PathParam("id") String id) {
-		User user = (User)sec.getUserPrincipal();
-		Script script = entityManager.find(Script.class, id);
-
-		if(script == null || !script.isOwnedBy(user)) {
-			throw new ForbiddenException();
-		}
-		else {
-			// TODO: Only delete scripts with no dependencies on other jobs
-			// TODO: Do all of this either asynchronously or on a completely different server
-
-			ListObjectsRequest listObjects = new ListObjectsRequest()
-				.withBucketName(awsS3Bucket)
-				.withPrefix(script.getId());
-			while(true) {
-				ObjectListing listing = awsS3.listObjects(listObjects);
-
-				for(S3ObjectSummary summary : listing.getObjectSummaries()) {
-					awsS3.deleteObject(awsS3Bucket, summary.getKey());
-				}
-
-				String marker = listing.getMarker();
-				if(listing.isTruncated() || marker == null) {
-					break;
-				}
-				listObjects.setMarker(marker);
-			}
-			entityManager.remove(script);
-		}
-
-		return Response.status(ApiStatus.NO_CONTENT).build();
 	}
 
 	private void storeScript(InputStream source, String bucket, String id) throws IOException {
