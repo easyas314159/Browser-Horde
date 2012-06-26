@@ -19,7 +19,7 @@ import com.browserhorde.server.gson.Visibility;
 import com.browserhorde.server.gson.VisibilityLevel;
 import com.browserhorde.server.security.Roles;
 
-@Path("users")
+@Path("user")
 @Produces({MediaType.APPLICATION_JSON})
 public class UserResource {
 	@GET

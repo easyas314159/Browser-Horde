@@ -18,7 +18,7 @@ import org.apache.commons.lang.NotImplementedException;
 import com.browserhorde.server.security.Roles;
 import com.google.inject.Inject;
 
-@Path("tasks")
+@Path("task")
 @Produces({MediaType.APPLICATION_JSON})
 public class TaskResource {
 	private final EntityManager entityManager;
