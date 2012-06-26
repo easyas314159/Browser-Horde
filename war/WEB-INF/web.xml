@@ -72,10 +72,10 @@
     <url-pattern>/</url-pattern>
 	<url-pattern>/users/*</url-pattern>
     <url-pattern>/scripts/*</url-pattern>
-	<url-pattern>/projects/*</url-pattern>
-    <url-pattern>/tasks/*</url-pattern>
-	<url-pattern>/workunits/*</url-pattern>
-	<url-pattern>/results/*</url-pattern>
-    <url-pattern>/workorders/*</url-pattern>
+	<url-pattern>/project/*</url-pattern>
+    <url-pattern>/task/*</url-pattern>
+	<url-pattern>/workunit/*</url-pattern>
+	<url-pattern>/result/*</url-pattern>
+    <url-pattern>/workorder/*</url-pattern>
   </filter-mapping>
 </web-app>
