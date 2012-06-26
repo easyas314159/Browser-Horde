@@ -14,7 +14,6 @@ import javax.servlet.ServletContext;
 
 import net.spy.memcached.MemcachedClient;
 
-import org.apache.commons.fileupload.FileItemFactory;
 import org.apache.log4j.Logger;
 
 import com.browserhorde.server.ErrorFilter;
@@ -58,9 +57,6 @@ public class CoreModule extends JerseyServletModule {
 				.toProvider(EntityManagerProvider.class)
 				.in(RequestScoped.class);
 
-			bind(FileItemFactory.class)
-				.toProvider(FileItemFactoryProvider.class)
-				.in(Singleton.class);
 			bind(Random.class)
 				.toProvider(RandomProvider.class)
 				.in(RequestScoped.class);
