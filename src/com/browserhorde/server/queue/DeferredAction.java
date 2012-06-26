@@ -1,3 +1,9 @@
+package com.browserhorde.server.queue;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+
 public abstract class DeferredAction {
 	private final Collection<DeferredAction> onSuccess;
 	private final Collection<DeferredAction> onFailure;

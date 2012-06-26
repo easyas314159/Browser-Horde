@@ -1,3 +1,8 @@
+package com.browserhorde.server.queue;
+
+import java.util.Collection;
+import java.util.concurrent.ExecutorService;
+
 class DeferredActionHandler implements Runnable {
 	private final ExecutorService executor;
 	private final DeferredAction action;
@@ -11,6 +16,7 @@ class DeferredActionHandler implements Runnable {
 		maxAttempts = Math.max(1, action.getMaxAttempts());
 	}
 
+	@Override
 	public void run() {
 		--maxAttempts;
 
