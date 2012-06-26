@@ -22,7 +22,7 @@ public class JsonParseExceptionMapper implements ExceptionMapper<JsonParseExcept
 		log.info("JSON Parsing Exception", ex);
 		return Response
 			.status(ApiStatus.BAD_REQUEST)
-			.entity(new JsonNull())
+			.entity(JsonNull.INSTANCE)
 			.build();
 	}
 }

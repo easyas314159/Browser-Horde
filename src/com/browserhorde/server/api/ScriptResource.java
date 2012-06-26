@@ -40,15 +40,11 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.sqs.AmazonSQSAsync;
-import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.api.consumes.ModifyScriptRequest;
 import com.browserhorde.server.api.error.ForbiddenException;
 import com.browserhorde.server.entity.Script;
 import com.browserhorde.server.entity.User;
-import com.browserhorde.server.inject.QueueGZIP;
-import com.browserhorde.server.inject.QueueMinify;
-import com.browserhorde.server.queue.ProcessObject;
 import com.browserhorde.server.security.Roles;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -56,7 +52,7 @@ import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import com.sun.jersey.api.NotFoundException;
 
-@Path("scripts")
+@Path("script")
 @Produces({MediaType.APPLICATION_JSON})
 public class ScriptResource {
 	private final Logger log = Logger.getLogger(getClass());
@@ -66,18 +62,13 @@ public class ScriptResource {
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET) private String awsS3Bucket;
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET_ENDPOINT) private String awsS3BucketEndpoint;
 
-	private final String awsSqsGzip;
-	private final String awsSqsMinify;
-
 	@Inject private EntityManager entityManager;
 
 	@Inject private AmazonS3 awsS3;
 	@Inject private AmazonSQSAsync awsSQS;
 
 	@Inject
-	public ScriptResource(@QueueGZIP String gzipQueue, @QueueMinify String minQueue) {
-		this.awsSqsGzip = gzipQueue;
-		this.awsSqsMinify = minQueue;
+	public ScriptResource() {
 	}
 
 	@GET
@@ -317,11 +308,5 @@ public class ScriptResource {
 		awsS3.setObjectAcl(bucket, id, CannedAccessControlList.PublicRead);
 
 		Gson gson = gsonBuilder.create();
-
-		ProcessObject gz = new ProcessObject(bucket, id);
-		awsSQS.sendMessageAsync(new SendMessageRequest(awsSqsGzip, gson.toJson(gz)));
-
-		ProcessObject min = new ProcessObject(bucket, id);
-		awsSQS.sendMessageAsync(new SendMessageRequest(awsSqsMinify, gson.toJson(min)));
 	}
 }

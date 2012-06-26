@@ -26,13 +26,13 @@ public class WebApplicationExceptionMapper implements ExceptionMapper<WebApplica
 				.status(ApiStatus.UNAUTHORIZED)
 				.header(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"horde\"")
 				.header(HttpHeaders.WWW_AUTHENTICATE, "OAuth")
-				.entity(new JsonNull())
+				.entity(JsonNull.INSTANCE)
 				.build();
 		}
 		log.error("Something Broke!", ex);
 		return Response
 			.status(ApiStatus.INTERNAL_SERVER_ERROR)
-			.entity(new JsonNull())
+			.entity(JsonNull.INSTANCE)
 			.build();
 	}
 }

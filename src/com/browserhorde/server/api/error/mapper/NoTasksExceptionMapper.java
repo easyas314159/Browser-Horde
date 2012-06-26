@@ -17,7 +17,7 @@ public final class NoTasksExceptionMapper implements ExceptionMapper<NoTasksExce
 	public Response toResponse(NoTasksException ex) {
 		return Response
 			.status(ApiStatus.NO_CONTENT)
-			.entity(new JsonNull())
+			.entity(JsonNull.INSTANCE)
 			.build()
 			;
 	}

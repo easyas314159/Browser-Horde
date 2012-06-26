@@ -18,7 +18,7 @@ public final class InvalidRequestExceptionMapper implements ExceptionMapper<Inva
 		// TODO: This needs some meaningful body content
 		return Response
 			.status(Status.BAD_REQUEST)
-			.entity(new JsonNull())
+			.entity(JsonNull.INSTANCE)
 			.build();
 	}
 }

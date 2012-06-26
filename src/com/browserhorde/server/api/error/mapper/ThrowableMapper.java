@@ -21,7 +21,7 @@ public class ThrowableMapper implements ExceptionMapper<Throwable> {
 		log.error("Something Broke!", t);
 		return Response
 			.status(Status.INTERNAL_SERVER_ERROR)
-			.entity(new JsonNull())
+			.entity(JsonNull.INSTANCE)
 			.build();
 	}
 }

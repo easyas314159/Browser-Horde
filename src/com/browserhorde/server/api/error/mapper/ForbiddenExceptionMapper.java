@@ -17,7 +17,7 @@ public final class ForbiddenExceptionMapper implements ExceptionMapper<Forbidden
 	public Response toResponse(ForbiddenException ex) {
 		return Response
 			.status(ApiStatus.FORBIDDEN)
-			.entity(new JsonNull())
+			.entity(JsonNull.INSTANCE)
 			.build()
 			;
 	}

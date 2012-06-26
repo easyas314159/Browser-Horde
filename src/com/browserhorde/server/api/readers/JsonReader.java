@@ -25,7 +25,7 @@ public class JsonReader<T> implements MessageBodyReader<T> {
 	public boolean isReadable(Class<?> clazz, Type type, Annotation[] a, MediaType mediaType) {
 		return true;
 	}
-	
+
 	@Override
 	public T readFrom(Class<T> clazz, Type type, Annotation[] a,
 			MediaType mediaType, MultivaluedMap<String, String> headers,

@@ -20,17 +20,20 @@ $.setup = function(data) {
 	this.dx = this.max.x - this.min.x;
 	this.dy = this.max.y - this.min.y;
 
-	this.r = new Object();
-	this.r.r = new Array();
+	this.r = {
+		r: new Array(),
+		b: {
+			x: data.na,
+			y: data.nb,
 
-	this.r.b = {
-			x: data.na, w: data.la,
-			y: data.nb, h: data.lb
-		};
+			w: data.la,
+			h: data.lb
+		}
+	};
 };
 
 $.iterate = function() {
-	var a0, b0, an, bn, done;
+	var a0, b0;
 
 	if(this.x == this.r.b.w) {
 		this.x = 0;
@@ -40,21 +43,39 @@ $.iterate = function() {
 		return this.r;
 	}
 
-	a0 = this.dx * (this.x + this.r.b.x) / this.r.b.w + this.min.x;
-	b0 = this.dy * (this.y + this.r.b.y) / this.r.b.h + this.min.y;
+	a0 = this.dx * (this.r.b.x + this.x) / this.r.b.w + this.min.x;
+	b0 = this.dy * (this.r.b.y + this.y) / this.r.b.h + this.min.y;
 
-	done = this.iters;
-	for(var n = 0; n < this.iters; ++n) {
-		an = 2.0 * a0 * b0;
-		bn = b0*b0 - a0*a0;
+	$.status("[" + a0 + " " + b0 + "]");
 
-		if(an * an + bn * bn > 4.0) {
+	this.r.r.push(test_point({r:0.0, i:0.0}, {r:a0, i:b0}, this.iters));
+	this.x++;
+};
+
+function test_point(z, c, iters) {
+	var done = iters;
+
+	if(!(z && z.r && z.i)) {
+		z = {r:0.0, i:0.0};
+	}
+	if(!(c && c.r && c.i)) {
+		c = {r:0.0, i:0.0};
+	}
+
+	var zr0 = z.r, zi0 = z.i;
+	for(var n = 0; n < iters; ++n) {
+		var zr1 = 2.0 * zr0 * zi0 + c.r;
+		var zi1 = zi0*zi0 - zr0*zr0 + c.i;
+
+		if(zr1*zr1 + zi1*zi1 > 4.0) {
 			done = n;
 			break;
 		}
+		
+		zr0 = zr1; zi0 = zi1;
 	}
-	this.r.r.push(done);
-	this.x++;
-};
+
+	return done;
+}
 
 })();

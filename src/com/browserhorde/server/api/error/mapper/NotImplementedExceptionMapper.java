@@ -22,7 +22,7 @@ public class NotImplementedExceptionMapper implements ExceptionMapper<NotImpleme
 		log.warn("Not Implemented", ex);
 		return Response
 			.status(ApiStatus.NOT_IMPLEMENTED)
-			.entity(new JsonNull())
+			.entity(JsonNull.INSTANCE)
 			.build();
 	}
 }

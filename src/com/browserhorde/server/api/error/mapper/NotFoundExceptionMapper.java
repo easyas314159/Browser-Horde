@@ -22,7 +22,7 @@ public final class NotFoundExceptionMapper implements ExceptionMapper<NotFoundEx
 		log.info("Not Found", ex);
 		return Response
 			.status(ApiStatus.NOT_FOUND)
-			.entity(new JsonNull())
+			.entity(JsonNull.INSTANCE)
 			.build()
 			;
 	}
