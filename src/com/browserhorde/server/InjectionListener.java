@@ -11,7 +11,6 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.browserhorde.server.aws.AmazonWebServicesModule;
 import com.browserhorde.server.gson.GsonModule;
 import com.browserhorde.server.inject.CoreModule;
-import com.browserhorde.server.inject.QueueModule;
 import com.browserhorde.server.util.ParamUtils;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
