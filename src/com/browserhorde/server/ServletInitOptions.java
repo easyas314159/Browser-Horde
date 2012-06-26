@@ -3,6 +3,12 @@ package com.browserhorde.server;
 public final class ServletInitOptions {
 	private ServletInitOptions() {}
 
+	// Persistence
+	public static final String JPA_UNIT = "JPA_UNIT";
+
+	// Dependency Injection
+	public static final String GUICE_STAGE = "GUICE_STAGE";
+
 	// Rate Limiting
 	public static final String RATE_LIMIT = "HORDE_RATE_LIMIT";
 	public static final String RATE_LIMIT_TIMEOUT = "HORDER_RATE_LIMIT_TIMEOUT";

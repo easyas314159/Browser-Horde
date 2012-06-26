@@ -15,6 +15,7 @@ import com.browserhorde.server.util.ParamUtils;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Stage;
+import com.google.inject.persist.jpa.JpaPersistModule
 
 public class InjectionListener implements ServletContextListener {
 	public static final String INJECTOR_NAME = Injector.class.getName();
@@ -38,7 +39,13 @@ public class InjectionListener implements ServletContextListener {
 				);
 			awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
 
-			Injector injector = getInjector(context);
+			State stage = ParamUtils.asEnum(
+					Stage.class,
+					context.getInitParameter(ServletInitOptions.GUICE_STAGE),
+					Stage.PRODUCTION
+				);
+
+			Injector injector = getInjector(context, stage);
 			context.setAttribute(INJECTOR_NAME, injector);
 		}
 		catch(Throwable t) {
@@ -57,13 +64,14 @@ public class InjectionListener implements ServletContextListener {
 		}
 	}
 
-	private Injector getInjector(ServletContext context) {
+	private Injector getInjector(ServletContext context, Stage stage) {
 		Injector injector = null;
 		injector = Guice.createInjector(
 				Stage.PRODUCTION,
 				new CoreModule(context),
 				new GsonModule(),
-				new AmazonWebServicesModule(awsCredentials)
+				new AmazonWebServicesModule(awsCredentials),
+				new JpaPersistModule(context.getInitParameter(ServletInitOptions.JPA_UNIT));
 			);
 		return injector;
 	}
