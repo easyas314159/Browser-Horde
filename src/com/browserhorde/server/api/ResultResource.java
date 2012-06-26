@@ -1,5 +1,6 @@
 package com.browserhorde.server.api;
 
+import javax.annotation.security.RolesAllowed;
 import javax.persistence.EntityManager;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -8,8 +9,11 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
 
 import org.apache.commons.lang.NotImplementedException;
+
+import com.browserhorde.server.security.Roles;
 
 import com.google.inject.Inject;
 
@@ -22,21 +26,24 @@ public class ResultResource {
 	public ResultResource(EntityManager entityManager) {
 		this.entityManager = entityManager;
 	}
-	
+
 	@GET
 	@Path("{id}")
-	public Response getResult(@PathParam("id") String id) {
+	@RolesAllowed(Roles.REGISTERED)
+	public Response getResult(@Context SecurityContext sec, @PathParam("id") String id) {
 		throw new NotImplementedException();
 	}
 	@DELETE
 	@Path("{id}")
-	public Response deleteResult(@PathParam("id") String id) {
+	@RolesAllowed(Roles.REGISTERED)
+	public Response deleteResult(@Context SecurityContext sec, @PathParam("id") String id) {
 		throw new NotImplementedException();
 	}
 
 	@GET
 	@Path("{id}/data")
-	public Response getData(@PathParam("id") String id) {
+	@RolesAllowed(Roles.REGISTERED)
+	public Response getData(@Context SecurityContext sec, @PathParam("id") String id) {
 		throw new NotImplementedException();
 	}
 }
