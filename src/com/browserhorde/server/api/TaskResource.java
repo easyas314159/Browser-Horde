@@ -64,4 +64,13 @@ public class TaskResource {
 	public Response deleteWorkunits(@Context SecurityContext sec, @PathParam("id") String id) {
 		throw new NotImplementedException();
 	}
+
+	@GET
+	@Path("{id}/workunits")
+	@Produces({"application/zip"})
+	@RolesAllowed(Roles.REGISTERED)
+	public Response getWorkunits(@Context SecurityContext sec, @PathParam("id") String id) {
+		// Content-Disposition: attachment; filename="[filename]"
+		throw new NotImplementedException();
+	}
 }

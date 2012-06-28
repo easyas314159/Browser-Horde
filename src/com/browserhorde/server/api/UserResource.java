@@ -22,23 +22,35 @@ import com.browserhorde.server.security.Roles;
 @Path("user")
 @Produces({MediaType.APPLICATION_JSON})
 public class UserResource {
+	private final EntityManager entityManager;
+
+	@Inject
+	public UserResource(EntityManager entityManager) {
+		this.entityManager = entityManager;
+	}
+
 	@GET
 	@RolesAllowed({Roles.REGISTERED})
-	@Visibility(VisibilityLevel.PERSONAL)
+	public Response listUsers(@QueryParam("q") @DefaultValue("") String search) {
+		throw new NotImplementedException();
+	}
+
+	@GET
+	@Path("me")
+	@RolesAllowed({Roles.REGISTERED})
 	public Response getSelf(@Context SecurityContext sec) {
-		Object entity = sec.getUserPrincipal();
+		User user = (User)sec.getUserPrincipal();
 
 		return Response
 			.status(ApiStatus.OK)
-			.entity(entity)
+			.entity(user)
 			.build()
 			;
 	}
 
 	@POST
-	@Consumes({MediaType.APPLICATION_JSON})
+	@Path("me")
 	@RolesAllowed({Roles.REGISTERED})
-	@Visibility(VisibilityLevel.PERSONAL)
 	public Response updateUser(
 			@Context SecurityContext sec,
 			ModifyUserRequest userModify
@@ -49,7 +61,6 @@ public class UserResource {
 
 	@GET
 	@Path("{id}")
-	@Visibility(VisibilityLevel.PUBLIC)
 	public Response getUserById(
 			@Context SecurityContext sec,
 			@PathParam("id") String id
@@ -58,5 +69,17 @@ public class UserResource {
 		throw new NotImplementedException();
 	}
 
-	
+	@GET
+	@Path("{id}/scripts")
+	@RolesAllowed({Roles.REGISTERED})
+	public Response getUserScripts(@PathParam("id") String id) {
+		throw new NotImplementedException();
+	}
+
+	@GET
+	@Path("{id}/projects")
+	@RolesAllowed({Roles.REGISTERED})
+	public Response getUserProjects(@PathParam("id") String id) {
+		throw new NotImplementedException();
+	}
 }
