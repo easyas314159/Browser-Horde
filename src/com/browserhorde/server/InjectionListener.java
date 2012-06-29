@@ -67,11 +67,10 @@ public class InjectionListener implements ServletContextListener {
 	private Injector getInjector(ServletContext context, Stage stage) {
 		Injector injector = null;
 		injector = Guice.createInjector(
-				Stage.PRODUCTION,
+				stage,
 				new CoreModule(context),
 				new GsonModule(),
-				new AmazonWebServicesModule(awsCredentials),
-				new JpaPersistModule(context.getInitParameter(ServletInitOptions.JPA_UNIT))
+				new AmazonWebServicesModule(awsCredentials)
 			);
 		return injector;
 	}
