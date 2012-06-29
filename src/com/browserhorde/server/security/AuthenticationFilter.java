@@ -46,7 +46,7 @@ public class AuthenticationFilter extends HttpFilter {
 	private final MemcachedClient memcached;
 
 	@Inject
-	public AuthenticationFilter(EntityManagerFactory entityManagerFactory, @Nullable MemcachedClient memcached) {
+	public AuthenticationFilter(@Nullable EntityManagerFactory entityManagerFactory, @Nullable MemcachedClient memcached) {
 		this.entityManagerFactory = entityManagerFactory;
 		this.memcached = memcached;
 	}
@@ -62,6 +62,11 @@ public class AuthenticationFilter extends HttpFilter {
 	public void doFilter(HttpServletRequest req, HttpServletResponse rsp, FilterChain chain) throws IOException, ServletException {
 		// TODO: Is there anything we can do about caching stuff here to speed things up?
 		// TODO: Need to have some kind of throttling in here to prevent brute force password attacks
+
+		if(entityManagerFactory == null) {
+			chain.doFilter(req, rsp);
+			return;
+		}
 
 		User user = null;
 		InetAddress ip = InetAddress.getByName(req.getRemoteAddr());
