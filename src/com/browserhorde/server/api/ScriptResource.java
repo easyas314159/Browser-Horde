@@ -57,7 +57,7 @@ public class ScriptResource {
 	private final Logger log = Logger.getLogger(getClass());
 
 	@Inject private GsonBuilder gsonBuilder;
-	
+
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET) private String awsS3Bucket;
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET_ENDPOINT) private String awsS3BucketEndpoint;
 
@@ -269,18 +269,34 @@ public class ScriptResource {
 		if(script == null || !script.isOwnedBy(user)) {
 			throw new ForbiddenException();
 		}
-		else {
-			try {
-				storeScript(source, awsS3Bucket, script.getId());
-			}
-			catch(IOException ex) {
-				throw new WebApplicationException(ex);
-			}
+
+		try {
+			ObjectMetadata metadata = new ObjectMetadata();
+			metadata.setContentType("application/javascript; charset=utf-8");
+
+			PutObjectRequest putRequest = new PutObjectRequest(bucket, id, source, metadata); 
+
+			PutObjectResult putResult = awsS3.putObject(putRequest);
+			awsS3.setObjectAcl(bucket, id, CannedAccessControlList.PublicRead);
+
+			String versionId = putResult.getVersionId();
+
+			/*
+			script.setHeadVersion(versionId);
+			ScriptVersion scriptVersion = new ScriptVersion(script.getId(), versionId);
+
+			entityManager.merge(script);
+			entityManager.persist(scriptVersion);
+			*/
+		}
+		catch(IOException ex) {
+			throw new WebApplicationException(ex);
 		}
 
 		return Response.status(ApiStatus.ACCEPTED).build();
 	}
 
+	/*
 	private void storeScript(InputStream source, String bucket, String id) throws IOException {
 		ObjectMetadata metadata = new ObjectMetadata();
 		metadata.setContentType("application/javascript; charset=utf-8");
@@ -292,4 +308,5 @@ public class ScriptResource {
 
 		Gson gson = gsonBuilder.create();
 	}
+	*/
 }
