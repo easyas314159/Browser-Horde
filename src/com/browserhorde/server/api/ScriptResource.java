@@ -82,21 +82,33 @@ public class ScriptResource {
 	public Response createScript(
 			@Context SecurityContext sec,
 			@Context UriInfo ui,
-			ModifyScriptRequest modifyScript
+			ScriptObject object
 		) {
 		User user = (User)sec.getUserPrincipal();
-		
+
 		Script script = new Script();
 
 		script.setOwner(user);
-		script.setName(modifyScript.name);
-		script.setDescription(modifyScript.description);
+
+		String name = null;
+		if(object.containsKey(ScriptObject.NAME)) {
+			name = StringUtils.trimToNull(object.get(ScriptObject.NAME));
+		}
+		if(name == null) {
+			name = "Untitled Script";
+		}
+		script.setName(name);
+
+		if(object.containsKey(ScriptObject.DESCRIPTION)) {
+			String desc = StringUtils.trimToNull(object.get(ScriptObject.DESCRIPTION));
+			script.setDescription(desc);
+		}
 
 		entityManager.persist(script);
 
 		URI location = ui.getAbsolutePathBuilder()
-			.path(script.getId())
-			.build()
+			.path(getClass(), "getScript")
+			.build(script.getId());
 			;
 
 		return Response
@@ -259,7 +271,7 @@ public class ScriptResource {
 	}
 
 	@POST
-	@Path("{id}")
+	@Path("{id}/js")
 	@Consumes({"text/javascript", "application/javascript", "application/x-javascript"})
 	@RolesAllowed(Roles.REGISTERED)
 	public Response updateSource(@Context SecurityContext sec, @PathParam("id") String id, InputStream source) {
