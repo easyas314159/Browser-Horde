@@ -14,6 +14,8 @@ public class Script extends BaseObject {
 	@Expose private String name;
 	@Expose private String description;
 
+	@Expose private String headRevision;
+
 	// TODO: Scripts should tie into required libraries
 
 	@ManyToOne
@@ -36,6 +38,13 @@ public class Script extends BaseObject {
 	}
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public String getHeadRevision() {
+		return headRevision;
+	}
+	public void setHeadRevision(String headRevision) {
+		this.headRevision = headRevision;
 	}
 
 	@Override

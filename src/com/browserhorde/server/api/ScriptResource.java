@@ -1,6 +1,5 @@
 package com.browserhorde.server.api;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,24 +27,26 @@ import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.core.UriInfo;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIUtils;
 import org.apache.log4j.Logger;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.browserhorde.server.ServletInitOptions;
 import com.browserhorde.server.api.consumes.ModifyScriptRequest;
+import com.browserhorde.server.api.consumes.ScriptObject;
 import com.browserhorde.server.api.error.ForbiddenException;
 import com.browserhorde.server.entity.Script;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.security.Roles;
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -61,13 +62,14 @@ public class ScriptResource {
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET) private String awsS3Bucket;
 	@Inject @Named(ServletInitOptions.AWS_S3_BUCKET_ENDPOINT) private String awsS3BucketEndpoint;
 
-	@Inject private EntityManager entityManager;
+	private final EntityManager entityManager;
 
-	@Inject private AmazonS3 awsS3;
-	@Inject private AmazonSQSAsync awsSQS;
+	private final AmazonS3 awsS3;
 
 	@Inject
-	public ScriptResource() {
+	public ScriptResource(EntityManager entityManager, AmazonS3 awsS3) {
+		this.entityManager = entityManager;
+		this.awsS3 = awsS3;
 	}
 
 	@GET
@@ -78,7 +80,7 @@ public class ScriptResource {
 
 	@POST
 	@Consumes({MediaType.APPLICATION_JSON})
-	@RolesAllowed(Roles.REGISTERED)
+	//@RolesAllowed(Roles.REGISTERED)
 	public Response createScript(
 			@Context SecurityContext sec,
 			@Context UriInfo ui,
@@ -92,7 +94,7 @@ public class ScriptResource {
 
 		String name = null;
 		if(object.containsKey(ScriptObject.NAME)) {
-			name = StringUtils.trimToNull(object.get(ScriptObject.NAME));
+			name = StringUtils.trimToNull(object.getString(ScriptObject.NAME));
 		}
 		if(name == null) {
 			name = "Untitled Script";
@@ -100,7 +102,7 @@ public class ScriptResource {
 		script.setName(name);
 
 		if(object.containsKey(ScriptObject.DESCRIPTION)) {
-			String desc = StringUtils.trimToNull(object.get(ScriptObject.DESCRIPTION));
+			String desc = StringUtils.trimToNull(object.getString(ScriptObject.DESCRIPTION));
 			script.setDescription(desc);
 		}
 
@@ -282,28 +284,29 @@ public class ScriptResource {
 			throw new ForbiddenException();
 		}
 
+		ObjectMetadata metadata = new ObjectMetadata();
+		metadata.setContentType("application/javascript; charset=utf-8");
+
+		PutObjectRequest putRequest = new PutObjectRequest(awsS3Bucket, id, source, metadata);
+		PutObjectResult putResult;
+
 		try {
-			ObjectMetadata metadata = new ObjectMetadata();
-			metadata.setContentType("application/javascript; charset=utf-8");
-
-			PutObjectRequest putRequest = new PutObjectRequest(bucket, id, source, metadata); 
-
-			PutObjectResult putResult = awsS3.putObject(putRequest);
-			awsS3.setObjectAcl(bucket, id, CannedAccessControlList.PublicRead);
-
-			String versionId = putResult.getVersionId();
-
-			/*
-			script.setHeadVersion(versionId);
-			ScriptVersion scriptVersion = new ScriptVersion(script.getId(), versionId);
-
-			entityManager.merge(script);
-			entityManager.persist(scriptVersion);
-			*/
+			putResult = awsS3.putObject(putRequest);
+			awsS3.setObjectAcl(awsS3Bucket, id, CannedAccessControlList.PublicRead);
 		}
-		catch(IOException ex) {
+		catch(AmazonClientException ex) {
 			throw new WebApplicationException(ex);
 		}
+
+		String versionId = putResult.getVersionId();
+
+		/*
+		script.setHeadVersion(versionId);
+		ScriptVersion scriptVersion = new ScriptVersion(script.getId(), versionId);
+
+		entityManager.merge(script);
+		entityManager.persist(scriptVersion);
+		*/
 
 		return Response.status(ApiStatus.ACCEPTED).build();
 	}

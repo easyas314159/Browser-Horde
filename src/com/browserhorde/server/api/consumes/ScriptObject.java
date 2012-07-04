@@ -1,8 +1,6 @@
 package com.browserhorde.server.api.consumes;
 
-import java.util.HashMap;
-
-public class ScriptObject extends HashMap<String, Object> {
+public class ScriptObject extends BaseObject {
 	public static final String OWNER = "owner";
 
 	public static final String PUBLIC = "is_public";

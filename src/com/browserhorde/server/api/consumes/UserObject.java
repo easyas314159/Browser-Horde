@@ -1,8 +1,7 @@
 package com.browserhorde.server.api.consumes;
 
-import java.util.HashMap;
 
-public class UserObject extends HashMap<String, Object> {
+public class UserObject extends BaseObject {
 	public static final String EMAIL = "email";
 
 	public static final String OLD_PASSWORD = "old_password";
