@@ -55,7 +55,7 @@ import com.sun.jersey.api.NotFoundException;
 @Path("script")
 @Produces({MediaType.APPLICATION_JSON})
 public class ScriptResource {
-	private final Logger log = Logger.getLogger(getClass());
+	private static final Logger log = Logger.getLogger(getClass());
 
 	@Inject private GsonBuilder gsonBuilder;
 
@@ -80,7 +80,7 @@ public class ScriptResource {
 
 	@POST
 	@Consumes({MediaType.APPLICATION_JSON})
-	//@RolesAllowed(Roles.REGISTERED)
+	@RolesAllowed(Roles.REGISTERED)
 	public Response createScript(
 			@Context SecurityContext sec,
 			@Context UriInfo ui,
@@ -104,6 +104,11 @@ public class ScriptResource {
 		if(object.containsKey(ScriptObject.DESCRIPTION)) {
 			String desc = StringUtils.trimToNull(object.getString(ScriptObject.DESCRIPTION));
 			script.setDescription(desc);
+		}
+
+		if(object.containsKey(ScriptObject.SHARED)) {
+			Boolean shared = object.getBoolean();
+			script.setShared(shared);
 		}
 
 		entityManager.persist(script);
@@ -324,4 +329,7 @@ public class ScriptResource {
 		Gson gson = gsonBuilder.create();
 	}
 	*/
+
+	private void populateScript(Script script, ScriptObject object) {
+	}
 }

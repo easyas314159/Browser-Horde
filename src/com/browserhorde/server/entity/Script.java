@@ -9,12 +9,18 @@ import com.google.gson.annotations.Expose;
 
 @Entity
 public class Script extends BaseObject {
-	@Expose private User owner;
+	@Expose
+	private User owner;
 
-	@Expose private String name;
-	@Expose private String description;
+	@Expose
+	private String name;
+	@Expose
+	private String description;
 
-	@Expose private String headRevision;
+	@Expose
+	private Boolean shared;
+	@Expose
+	private String documentation;
 
 	// TODO: Scripts should tie into required libraries
 
