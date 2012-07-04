@@ -15,7 +15,7 @@ import com.google.gson.JsonNull;
 
 @Provider
 @Produces({MediaType.APPLICATION_JSON})
-public class WebApplicationExceptionMapper implements ExceptionMapper<WebApplicationException> {
+public class WebApplicationExceptionMapper implements ExceptionMapper<ApiException> {
 	private final Logger log = Logger.getLogger(getClass());
 
 	@Override
@@ -25,7 +25,6 @@ public class WebApplicationExceptionMapper implements ExceptionMapper<WebApplica
 			return Response
 				.status(ApiStatus.UNAUTHORIZED)
 				.header(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"horde\"")
-				.header(HttpHeaders.WWW_AUTHENTICATE, "OAuth")
 				.entity(JsonNull.INSTANCE)
 				.build();
 		}

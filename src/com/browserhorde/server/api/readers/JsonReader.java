@@ -19,7 +19,8 @@ import com.google.inject.Injector;
 
 @Consumes({MediaType.APPLICATION_JSON})
 public class JsonReader<T> implements MessageBodyReader<T> {
-	@Inject private Injector injector;
+	@Inject
+	private Injector injector;
 
 	@Override
 	public boolean isReadable(Class<?> clazz, Type type, Annotation[] a, MediaType mediaType) {
@@ -34,7 +35,12 @@ public class JsonReader<T> implements MessageBodyReader<T> {
 		GsonBuilder builder = injector.getInstance(GsonBuilder.class);
 
 		// TODO: Handle Character Encoding Properly
-		Reader reader = new InputStreamReader(input);
-		return builder.create().fromJson(reader, clazz);
+		try {
+			Reader reader = new InputStreamReader(input);
+			return builder.create().fromJson(reader, clazz);
+		}
+		catch(JsonSyntaxException ex) {
+			throw new ApiException(ApiStatus.BAD_REQUEST, ex.getMessage());
+		}
 	}
 }
