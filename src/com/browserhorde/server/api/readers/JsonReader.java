@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
+import java.util.ResourceBundle;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.WebApplicationException;
@@ -13,7 +14,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.ext.MessageBodyReader;
 
+import com.browserhorde.server.api.ApiStatus;
+import com.browserhorde.server.api.error.ApiException;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 
@@ -33,6 +37,7 @@ public class JsonReader<T> implements MessageBodyReader<T> {
 			InputStream input) throws IOException, WebApplicationException {
 
 		GsonBuilder builder = injector.getInstance(GsonBuilder.class);
+		ResourceBundle bundle = injector.getInstance(ResourceBundle.class);
 
 		// TODO: Handle Character Encoding Properly
 		try {
@@ -40,7 +45,10 @@ public class JsonReader<T> implements MessageBodyReader<T> {
 			return builder.create().fromJson(reader, clazz);
 		}
 		catch(JsonSyntaxException ex) {
-			throw new ApiException(ApiStatus.BAD_REQUEST, ex.getMessage());
+			throw new ApiException(
+					ApiStatus.BAD_REQUEST,
+					bundle.getString("MALFORMED_JSON")
+				);
 		}
 	}
 }
