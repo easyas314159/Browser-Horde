@@ -5,6 +5,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ResourceBundle;
 import java.util.Set;
 
 import javax.annotation.security.RolesAllowed;
@@ -31,19 +32,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIUtils;
 import org.apache.log4j.Logger;
 
-import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.browserhorde.server.ServletInitOptions;
-import com.browserhorde.server.api.consumes.ModifyScriptRequest;
 import com.browserhorde.server.api.consumes.ScriptObject;
-import com.browserhorde.server.api.error.ForbiddenException;
 import com.browserhorde.server.entity.Script;
 import com.browserhorde.server.entity.User;
 import com.browserhorde.server.security.Roles;
@@ -55,7 +46,7 @@ import com.sun.jersey.api.NotFoundException;
 @Path("script")
 @Produces({MediaType.APPLICATION_JSON})
 public class ScriptResource {
-	private static final Logger log = Logger.getLogger(getClass());
+	private static final Logger log = Logger.getLogger(ScriptResource.class);
 
 	@Inject private GsonBuilder gsonBuilder;
 
@@ -107,7 +98,7 @@ public class ScriptResource {
 		}
 
 		if(object.containsKey(ScriptObject.SHARED)) {
-			Boolean shared = object.getBoolean();
+			Boolean shared = object.getBoolean(ScriptObject.SHARED);
 			script.setShared(shared);
 		}
 
@@ -152,8 +143,11 @@ public class ScriptResource {
 	public Response updateScript(
 			@Context SecurityContext sec,
 			@PathParam("id") String id,
-			ModifyScriptRequest modifyScript
+			ScriptObject object
 		) {
+		
+		throw new NotImplementedException();
+		/*
 		User user = (User)sec.getUserPrincipal();
 
 		Script script = entityManager.find(Script.class, id);
@@ -161,9 +155,8 @@ public class ScriptResource {
 			throw new ForbiddenException();
 		}
 
-		// TODO: This should perform some sort of patch instead of direct overwrite
-		script.setName(modifyScript.name);
-		script.setDescription(modifyScript.description);
+		//script.setName(modifyScript.name);
+		//script.setDescription(modifyScript.description);
 
 		entityManager.merge(script);
 
@@ -172,11 +165,15 @@ public class ScriptResource {
 			.entity(script)
 			.build()
 			;
+		*/
 	}
 
 	@DELETE
 	@Path("{id}")
 	public Response deleteScript(@Context SecurityContext sec, @PathParam("id") String id) {
+		throw new NotImplementedException();
+
+		/*
 		User user = (User)sec.getUserPrincipal();
 		Script script = entityManager.find(Script.class, id);
 
@@ -207,6 +204,7 @@ public class ScriptResource {
 		}
 
 		return Response.status(ApiStatus.NO_CONTENT).build();
+		*/
 	}
 
 	@GET
@@ -224,6 +222,9 @@ public class ScriptResource {
 			@QueryParam("d") @DefaultValue("false") Boolean debug,
 			@QueryParam("v") @DefaultValue("") String version
 		) {
+		throw new NotImplementedException();
+
+		/*
 		Script script = entityManager.find(Script.class, id);
 		if(script == null) {
 			throw new NotFoundException();
@@ -275,6 +276,7 @@ public class ScriptResource {
 		catch(URISyntaxException ex) {
 			throw new WebApplicationException(ex);
 		}
+		*/
 	}
 
 	@POST
@@ -282,6 +284,9 @@ public class ScriptResource {
 	@Consumes({"text/javascript", "application/javascript", "application/x-javascript"})
 	@RolesAllowed(Roles.REGISTERED)
 	public Response updateSource(@Context SecurityContext sec, @PathParam("id") String id, InputStream source) {
+		throw new NotImplementedException();
+
+		/*
 		User user = (User)sec.getUserPrincipal();
 
 		Script script = entityManager.find(Script.class, id);
@@ -305,15 +310,12 @@ public class ScriptResource {
 
 		String versionId = putResult.getVersionId();
 
-		/*
-		script.setHeadVersion(versionId);
 		ScriptVersion scriptVersion = new ScriptVersion(script.getId(), versionId);
 
-		entityManager.merge(script);
 		entityManager.persist(scriptVersion);
-		*/
 
 		return Response.status(ApiStatus.ACCEPTED).build();
+		*/
 	}
 
 	/*
