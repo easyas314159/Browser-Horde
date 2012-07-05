@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 
 import javax.servlet.ServletContext;
@@ -23,6 +24,7 @@ import com.browserhorde.server.XRuntime;
 import com.browserhorde.server.cors.PreflightHijackFilter;
 import com.browserhorde.server.security.AuthenticationFilter;
 import com.browserhorde.server.util.ParamUtils;
+import com.google.inject.Scope;
 import com.google.inject.name.Names;
 import com.google.inject.persist.PersistFilter;
 import com.google.inject.persist.jpa.JpaPersistModule;
@@ -51,8 +53,12 @@ public class CoreModule extends JerseyServletModule {
 			bind(Random.class).toProvider(RandomProvider.class).in(
 					RequestScoped.class);
 
-			bind(Principal.class).toProvider(PrincipalProvider.class).in(
-					RequestScoped.class);
+			bind(Principal.class)
+				.toProvider(PrincipalProvider.class)
+				.in(RequestScoped.class);
+			bind(ResourceBundle.class)
+				.toProvider(ResourceBundleProvider.class)
+				.in(RequestScoped.class);
 
 			Map<String, String> params = new HashMap<String, String>();
 			params.put(PackagesResourceConfig.PROPERTY_PACKAGES,
