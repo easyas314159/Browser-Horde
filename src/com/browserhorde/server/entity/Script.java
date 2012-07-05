@@ -46,11 +46,18 @@ public class Script extends BaseObject {
 		this.description = description;
 	}
 
-	public String getHeadRevision() {
-		return headRevision;
+	public Boolean getShared() {
+		return shared;
 	}
-	public void setHeadRevision(String headRevision) {
-		this.headRevision = headRevision;
+	public void setShared(Boolean shared) {
+		this.shared = shared;
+	}
+
+	public String getDocumentation() {
+		return documentation;
+	}
+	public void setDocumentation(String documentation) {
+		this.documentation = documentation;
 	}
 
 	@Override
