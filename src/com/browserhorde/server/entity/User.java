@@ -25,10 +25,35 @@ public class User extends BaseObject implements Principal {
 	private String hash;
 
 	@Expose
+	private String name;
+
+	@Expose
+	private String bio;
+
+	@Expose
+	private String url;
+
+	@Expose
+	private String location;
+
+	@Expose
 	private int karma;
 
+	@OneToMany
 	@Basic(fetch=FetchType.LAZY)
 	private Set<UserBilling> cards;
+
+	@OneToMany
+	@Basic(fetch=FetchType.LAZY)
+	private Set<UserSocial> social;
+
+	@OneToMany
+	@Basic(fetch=FetchType.LAZY)
+	private Set<Script> scripts;
+
+	@OneToMany
+	@Basic(fetch=FetchType.LAZY)
+	private Set<Project> projects;
 
 	@Override
 	@Transient
@@ -64,7 +89,13 @@ public class User extends BaseObject implements Principal {
 		}
 		return false;
 	}
-	
+
+	public Set<Script> getScripts() {
+		return scripts;
+	}
+	public Set<Project> getProjects() {
+	}
+
 	@Override
 	public boolean isOwnedBy(User user) {
 		return StringUtils.equals(user.getId(), getId());

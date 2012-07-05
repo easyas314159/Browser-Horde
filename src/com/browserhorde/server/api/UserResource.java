@@ -24,11 +24,15 @@ import com.google.inject.Inject;
 @Path("user")
 @Produces({MediaType.APPLICATION_JSON})
 public class UserResource {
+	private static final String ID_SELF = "me";
+
 	private final EntityManager entityManager;
+	private final Principal principal;
 
 	@Inject
-	public UserResource(EntityManager entityManager) {
+	public UserResource(EntityManager entityManager, Principal principal) {
 		this.entityManager = entityManager;
+		this.principal = principal;
 	}
 
 	@GET
@@ -37,12 +41,24 @@ public class UserResource {
 		throw new NotImplementedException();
 	}
 
-	@GET
-	@Path("me")
+	@POST
+	@Path(ID_SELF)
 	@RolesAllowed({Roles.REGISTERED})
-	public Response getSelf(@Context SecurityContext sec) {
-		User user = (User)sec.getUserPrincipal();
+	public Response updateSelf(UserObject object) {
+		throw new NotImplementedException();
+	}
 
+	@GET
+	@Path("{id}")
+	public Response getUser(@PathParam("id") String id) {
+		if(StringUtils.equalsIgnoreCase(ID_SELF, id)) {
+			id = ((User)principal).getId();
+		}
+		User user = entityManager.find(User.class, id);
+
+		if(user == null) {
+			throw new NotFoundException();
+		}
 		return Response
 			.status(ApiStatus.OK)
 			.entity(user)
@@ -50,38 +66,30 @@ public class UserResource {
 			;
 	}
 
-	@POST
-	@Path("me")
-	@RolesAllowed({Roles.REGISTERED})
-	public Response updateUser(
-			@Context SecurityContext sec,
-			ModifyUserRequest userModify
-		) {
-
-		throw new NotImplementedException();
-	}
-
-	@GET
-	@Path("{id}")
-	public Response getUserById(
-			@Context SecurityContext sec,
-			@PathParam("id") String id
-		) {
-
-		throw new NotImplementedException();
-	}
-
 	@GET
 	@Path("{id}/scripts")
 	@RolesAllowed({Roles.REGISTERED})
-	public Response getUserScripts(@PathParam("id") String id) {
-		throw new NotImplementedException();
+	public Response getMyScripts(@PathParam("id") String id) {
+		if(StringUtils.equalsIgnoreCase(ID_SELF, id)) {
+			id = ((User)principal).getId();
+		}
+		User user = entityManager.find(User.class, id);
+
+		if(user == null) {
+			throw new NotFoundException();
+		}
+
+		return Response
+			.status(ApiStatus.OK)
+			.entity(user.getScripts())
+			.build()
+			;
 	}
 
 	@GET
 	@Path("{id}/projects")
 	@RolesAllowed({Roles.REGISTERED})
-	public Response getUserProjects(@PathParam("id") String id) {
+	public Response getMyProjects(@PathParam("id") String id) {
 		throw new NotImplementedException();
 	}
 }
