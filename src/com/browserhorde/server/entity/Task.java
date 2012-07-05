@@ -8,9 +8,7 @@ import com.google.gson.annotations.Expose;
 @Entity
 public class Task extends BaseObject {
 	@Expose
-	private Job job;
-
-	private String randomizer;
+	private Project project;
 
 	// FIXME: Booleans are not persisting to the database
 	@Expose
