@@ -1,8 +1,11 @@
 package com.browserhorde.server.entity;
 
 import java.security.Principal;
+import java.util.Set;
 
+import javax.persistence.Basic;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Transient;
 
 import org.apache.commons.lang3.StringUtils;
@@ -22,12 +25,10 @@ public class User extends BaseObject implements Principal {
 	private String hash;
 
 	@Expose
-	@Visibility(VisibilityLevel.PERSONAL)
-	private String consumerKey;
+	private int karma;
 
-	@Expose
-	@Visibility(VisibilityLevel.PERSONAL)
-	private String consumerSecret;
+	@Basic(fetch=FetchType.LAZY)
+	private Set<UserBilling> cards;
 
 	@Override
 	@Transient
@@ -62,20 +63,6 @@ public class User extends BaseObject implements Principal {
 			return true;
 		}
 		return false;
-	}
-
-	public String getConsumerKey() {
-		return consumerKey;
-	}
-	public void setConsumerKey(String consumerKey) {
-		this.consumerKey = consumerKey;
-	}
-
-	public String getConsumerSecret() {
-		return consumerSecret;
-	}
-	public void setConsumerSecret(String consumerSecret) {
-		this.consumerSecret = consumerSecret;
 	}
 	
 	@Override

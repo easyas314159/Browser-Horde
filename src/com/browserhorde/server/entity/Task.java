@@ -2,12 +2,11 @@ package com.browserhorde.server.entity;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
-import javax.persistence.Transient;
 
 import com.google.gson.annotations.Expose;
 
 @Entity
-public class Task extends BaseObject implements HasAttachedData {
+public class Task extends BaseObject {
 	@Expose
 	private Job job;
 
@@ -55,10 +54,5 @@ public class Task extends BaseObject implements HasAttachedData {
 	@Override
 	public boolean isOwnedBy(User user) {
 		return getJob().isOwnedBy(user);
-	}
-	@Override
-	@Transient
-	public String getAttachmentKey() {
-		return String.format("%s/%s", getJob().getScript().getId(), getId());
 	}
 }
